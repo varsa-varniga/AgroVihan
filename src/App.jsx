@@ -1,14 +1,18 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import GoogleLogin from "./Authentication/GoogleLogin.jsx";
+
+// Public Components
 import Navbar from "./Components/Navbar.jsx";
+import Footer from "./Components/Footer.jsx";
+import GoogleLogin from "./Authentication/GoogleLogin.jsx";
 import Login from './Authentication/Login.jsx';
 import AboutUs from './pages/AboutUs.jsx';
 import HeroPage from './pages/Heropage.jsx';
-import Footer from './Components/Footer.jsx';
 import Welcome from './pages/Welcome.jsx';
 import WeatherDashboard from './Weatherpredict/WeatherDashboard.jsx';
-import Sidebar from './Components/Sidebar.jsx'; // Add your Sidebar path
+
+// Dashboard (Protected) Layout
+import Sidebar from './pages/Sidebar.jsx';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -32,16 +36,28 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Navbar isLoggedIn={isLoggedIn} onLogout={handleLogout} />
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<HeroPage />} />
-        <Route path="/feature" element={<Welcome />} />
-        <Route path="/about" element={<AboutUs />} />
-        <Route path="/login" element={<Login onLogin={handleLogin} />} />
-        <Route path="/google-login" element={<GoogleLogin onLogin={handleLogin} />} />
 
-        {/* Protected Route */}
+        {/* Public Routes with Navbar and Footer */}
+        <Route
+          path="/*"
+          element={
+            <>
+              <Navbar isLoggedIn={isLoggedIn} onLogout={handleLogout} />
+              <Routes>
+                <Route path="/" element={<HeroPage />} />
+                <Route path="/features" element={<Welcome />} />
+                <Route path="/about" element={<AboutUs />} />
+                <Route path="/login" element={<Login onLogin={handleLogin} />} />
+                <Route path="/google-login" element={<GoogleLogin onLogin={handleLogin} />} />
+                <Route path="/weather" element={<WeatherDashboard />} />
+              </Routes>
+              <Footer />
+            </>
+          }
+        />
+
+        {/* Protected Dashboard Layout - NO Navbar or Footer */}
         <Route
           path="/dashboard/*"
           element={
@@ -53,10 +69,7 @@ function App() {
           }
         />
 
-        {/* Weather Route (Optional) */}
-        <Route path="/weather" element={<WeatherDashboard />} />
       </Routes>
-      <Footer />
     </BrowserRouter>
   );
 }
