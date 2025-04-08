@@ -84,7 +84,7 @@ const ApplicationForm = ({ open, onClose, hub }) => {
       setTimeout(() => {
         setShowThankYou(false);
         onClose();
-      }, 2000);
+      }, 4000);
     } catch (error) {
       console.error("Error submitting application:", error);
       alert("Something went wrong. Please try again.");
