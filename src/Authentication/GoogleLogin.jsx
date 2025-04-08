@@ -1,6 +1,8 @@
 import React from 'react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, provider } from 'firebaseConfig'; 
+import { Button } from '@mui/material';
+import GoogleIcon from '@mui/icons-material/Google';
 
 const GoogleLogin = () => {
   const handleGoogleLogin = async () => {
@@ -17,14 +19,23 @@ const GoogleLogin = () => {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gradient-to-br from-green-100 to-lime-200">
-      <button
-        onClick={handleGoogleLogin}
-        className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg hover:bg-blue-700 transition duration-200"
-      >
-        Sign in with Google
-      </button>
-    </div>
+    <Button
+      onClick={handleGoogleLogin}
+      fullWidth
+      variant="outlined"
+      startIcon={<GoogleIcon />}
+      sx={{
+        textTransform: 'none',
+        borderColor: '#ccc',
+        color: '#333',
+        '&:hover': {
+          borderColor: '#888',
+          bgcolor: '#f9f9f9',
+        },
+      }}
+    >
+      Sign in with Google
+    </Button>
   );
 };
 
