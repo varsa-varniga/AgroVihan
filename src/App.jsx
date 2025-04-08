@@ -14,6 +14,9 @@ import WeatherDashboard from './Weatherpredict/WeatherDashboard.jsx';
 // Dashboard (Protected) Layout
 import Sidebar from './pages/Sidebar.jsx';
 import MapPage from "./regionalhub/MapPage.jsx";
+import WeeklyForecast from "./Weatherpredict/WeeklyForecast.jsx";
+import TodayOverview from "./Weatherpredict/TodayOverview.jsx";
+import WeatherCard from "./Weatherpredict/WeatherCard.jsx";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -71,7 +74,9 @@ function App() {
         />
 
       </Routes>
-      
+      <WeeklyForecast/>
+      <TodayOverview/>
+      <WeatherCard/>
     </BrowserRouter>
   );
 }
