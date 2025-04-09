@@ -1,23 +1,29 @@
 import { useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import {
-  Button,
-  Snackbar,
-  Typography,
   Box,
+  Button,
+  Typography,
+  Snackbar,
   Select,
   MenuItem,
-  Chip,
   FormControl,
   InputLabel,
+  Chip,
 } from "@mui/material";
-import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import ApplicationForm from "./ApplicationForm";
-import { db } from "../firebaseConfig"; // ✅ Firestore
-import { collection, addDoc } from "firebase/firestore"; // ✅ Firestore
+import { db } from "../firebaseConfig";
+import { collection, addDoc } from "firebase/firestore";
 
-// Static Hubs – You can later move this to Firestore if needed
+// Helper component to close popup
+const ClosePopup = () => {
+  const map = useMap();
+  map.closePopup();
+  return null;
+};
+
 const hubs = [
   {
     id: 1,
@@ -31,7 +37,7 @@ const hubs = [
     id: 2,
     name: "Madurai",
     position: [9.93, 78.12],
-    roles: ["💻 Plant Health Officer", "🛠️ Field Engineer"],
+    roles: ["💻 Plant Health Officer", "🛠 Field Engineer"],
     youths: 12,
     description: "Smart farming zone",
   },
@@ -45,7 +51,6 @@ const hubs = [
   },
 ];
 
-// Marker Icon
 const markerIcon = new L.Icon({
   iconUrl: "https://cdn-icons-png.flaticon.com/512/252/252025.png",
   iconSize: [30, 40],
@@ -69,8 +74,7 @@ const MapPage = () => {
 
   const handleFormSubmit = async (data) => {
     try {
-      await addDoc(collection(db, "applications"), data); // ✅ Submit to Firestore
-      console.log("✅ Application submitted:", data);
+      await addDoc(collection(db, "applications"), data);
       setThankYou(true);
     } catch (error) {
       console.error("❌ Error submitting application:", error);
@@ -86,91 +90,130 @@ const MapPage = () => {
   };
 
   return (
-    <>
-      <Typography
-        variant="h5"
-        align="center"
-        sx={{ mt: 2, mb: 2, fontWeight: 600, color: "#2e7d32" }}
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: "linear-gradient(to right, #f5f5f5, #e8f5e9)",
+        py: 2,
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          mb: 3,
+          mt: 2,
+        }}
       >
-        🌾 Regional Hubs + Youth Employment
-      </Typography>
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 700,
+            fontFamily: "Poppins, sans-serif",
+            color: "#2e7d32",
+            letterSpacing: "1px",
+          }}
+        >
+          🌱 Regional Hubs & Youth Employment
+        </Typography>
+      </Box>
 
       <MapContainer
         center={[11.1271, 78.6569]}
         zoom={7}
-        style={{ height: "85vh", width: "100%", borderRadius: "12px" }}
+        style={{
+          height: "85vh",
+          width: "100%",
+          borderRadius: "20px",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+        }}
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        {openForm && <ClosePopup />}
 
         {hubs.map((hub) => (
           <Marker key={hub.id} position={hub.position} icon={markerIcon}>
-            <Popup minWidth={250} maxWidth={250}>
+            <Popup minWidth={280} maxWidth={280}>
               <Box
                 sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 1,
-                  px: 1,
-                  py: 0.5,
-                  fontFamily: "Roboto, sans-serif",
+                  borderRadius: 2,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  backgroundColor: "#fefaf3",
+                  overflow: "hidden",
+                  border: "2px solid #c5e1a5",
+                  fontFamily: "Poppins, sans-serif",
                 }}
               >
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  📍 {hub.name}
-                </Typography>
-
-                <Typography
-                  variant="caption"
+                <Box
                   sx={{
-                    color: "#616161",
-                    fontSize: "0.8rem",
-                    lineHeight: 1.2,
+                    height: 10,
+                    background: "linear-gradient(to right, #8bc34a, #689f38)",
                   }}
-                >
-                  {hub.description}
-                </Typography>
-
-                <Chip
-                  label={`👥 ${hub.youths} youths employed`}
-                  size="small"
-                  color="primary"
-                  variant="outlined"
                 />
 
-                <FormControl size="small" fullWidth>
-                  <InputLabel>Select role</InputLabel>
-                  <Select
-                    value={selectedRoles[hub.id] || ""}
-                    onChange={(e) => handleRoleChange(hub.id, e.target.value)}
-                    label="Select role"
-                    sx={{ borderRadius: 1 }}
+                <Box sx={{ px: 2, py: 2 }}>
+                  <Typography
+                    variant="h6"
+                    sx={{ color: "#4e7938", fontWeight: "bold", mb: 1 }}
                   >
-                    <MenuItem value="" disabled>
-                      Select a role
-                    </MenuItem>
-                    {hub.roles.map((role, idx) => (
-                      <MenuItem key={idx} value={role}>
-                        {role}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                    📍 {hub.name}
+                  </Typography>
 
-                <Button
-                  variant="contained"
-                  size="small"
-                  fullWidth
-                  onClick={() => handleApply(hub)}
-                  disabled={!selectedRoles[hub.id]}
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 500,
-                    backgroundColor: "#2e7d32",
-                    "&:hover": { backgroundColor: "#1b5e20" },
-                  }}
-                >
-                  📝 Apply Now
-                </Button>
+                  <Typography variant="body2" sx={{ color: "#555", mb: 1 }}>
+                    {hub.description}
+                  </Typography>
+
+                  <Chip
+                    label={`👥 ${hub.youths} youths working`}
+                    size="small"
+                    sx={{
+                      backgroundColor: "#e6f4ea",
+                      color: "#33691e",
+                      fontWeight: 500,
+                      mb: 1,
+                    }}
+                  />
+
+                  <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+                    <InputLabel>Select Role</InputLabel>
+                    <Select
+                      value={selectedRoles[hub.id] || ""}
+                      onChange={(e) =>
+                        handleRoleChange(hub.id, e.target.value)
+                      }
+                      label="Select Role"
+                      sx={{
+                        backgroundColor: "#ffffff",
+                        "&:hover": { backgroundColor: "#f1f8e9" },
+                      }}
+                    >
+                      {hub.roles.map((role, idx) => (
+                        <MenuItem key={idx} value={role}>
+                          {role}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={() => handleApply(hub)}
+                    disabled={!selectedRoles[hub.id]}
+                    sx={{
+                      backgroundColor: "#558b2f",
+                      fontWeight: "bold",
+                      borderRadius: 1,
+                      mt: 1,
+                      "&:hover": {
+                        backgroundColor: "#33691e",
+                        transform: "scale(1.05)",
+                      },
+                    }}
+                  >
+                    Apply Now
+                  </Button>
+                </Box>
               </Box>
             </Popup>
           </Marker>
@@ -188,11 +231,21 @@ const MapPage = () => {
 
       <Snackbar
         open={thankYou}
-        autoHideDuration={3000}
         onClose={() => setThankYou(false)}
         message="✅ Thank you for applying!"
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        action={
+          <Button
+            color="inherit"
+            size="small"
+            onClick={() => setThankYou(false)}
+            sx={{ fontWeight: 600 }}
+          >
+            CLOSE
+          </Button>
+        }
       />
-    </>
+    </Box>
   );
 };
 

@@ -12,7 +12,6 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  
   Toolbar,
   Typography,
   IconButton,
@@ -28,8 +27,6 @@ import {
   Translate,
   Public,
   MonetizationOn,
- 
-
 } from "@mui/icons-material";
 import { useState } from "react";
 
@@ -70,10 +67,9 @@ function Sidebar({ onLogout, userEmail }) {
   const drawer = (
     <div>
       <Toolbar sx={{ display: "flex", justifyContent: "space-between", px: 2 }}>
-      <Typography variant="h6" noWrap fontWeight="bold">
-  {isSidebarCollapsed ? "🌿" : "Agrovihan"}
-</Typography>
-
+        <Typography variant="h6" noWrap fontWeight="bold">
+          {isSidebarCollapsed ? "🌿" : "Agrovihan"}
+        </Typography>
         <IconButton onClick={toggleSidebar} size="small" sx={{ color: "#2e7d32" }}>
           <MenuIcon />
         </IconButton>
@@ -101,7 +97,7 @@ function Sidebar({ onLogout, userEmail }) {
               button
               component={Link}
               to={item.path}
-              selected={location.pathname === item.path}
+              selected={location.pathname.startsWith(item.path)}
               sx={{
                 "&.Mui-selected": {
                   backgroundColor: "#C8E6C9",
@@ -160,9 +156,7 @@ function Sidebar({ onLogout, userEmail }) {
 
   return (
     <Box sx={{ display: "flex" }}>
-      {/* AppBar */}
- 
-      {/* Navigation Drawers */}
+      {/* Sidebar Drawers */}
       <Box component="nav" sx={{ width: drawerWidth, flexShrink: { sm: 0 } }}>
         {/* Mobile Drawer */}
         <Drawer
@@ -214,7 +208,7 @@ function Sidebar({ onLogout, userEmail }) {
           <Route path="climate-forecast" element={<ClimateAIForecast />} />
           <Route path="plant-doctor" element={<PlantDoctor />} />
           <Route path="agri-bot" element={<MultilingualAgriBot />} />
-          <Route path="resource-hubs" element={<MapPage />} />
+          <Route path="resource-hubs/*" element={<MapPage />} />
           <Route path="carbon-credit" element={<CarbonCreditMonetization />} />
         </Routes>
       </Box>

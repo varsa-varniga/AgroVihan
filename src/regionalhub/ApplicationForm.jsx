@@ -9,7 +9,7 @@ import {
   Typography,
   Box,
 } from "@mui/material";
-import { db } from "firebaseConfig";
+import { db } from "../firebaseConfig";
 import {
   collection,
   addDoc,
@@ -22,7 +22,7 @@ const ApplicationForm = ({ open, onClose, hub }) => {
   const [formData, setFormData] = useState({
     name: "",
     age: "",
-    location: "",
+    // location: "",
     experience: "",
   });
 
@@ -34,7 +34,6 @@ const ApplicationForm = ({ open, onClose, hub }) => {
       ...prev,
       [e.target.name]: e.target.value,
     }));
-
     setErrors((prev) => ({
       ...prev,
       [e.target.name]: "",
@@ -46,7 +45,8 @@ const ApplicationForm = ({ open, onClose, hub }) => {
     if (!formData.name.trim()) tempErrors.name = "Enter a valid name!";
     if (!formData.age || isNaN(formData.age) || formData.age < 1)
       tempErrors.age = "Enter a valid age!";
-    if (!formData.location.trim()) tempErrors.location = "Enter your location!";
+    // if (!formData.location.trim())
+    //   tempErrors.location = "Enter your location!";
     if (!formData.experience.trim())
       tempErrors.experience = "Enter your experience or interest!";
     setErrors(tempErrors);
@@ -56,40 +56,40 @@ const ApplicationForm = ({ open, onClose, hub }) => {
   const handleSubmit = async () => {
     if (!validateFields()) return;
 
+    // Instantly show the thank you message
+    setShowThankYou(true);
+
+    // Reset form
+    setFormData({ name: "", age: "", location: "", experience: "" });
+    setErrors({});
+
+    // Close after 4 seconds
+    setTimeout(() => {
+      setShowThankYou(false);
+      onClose();
+    }, 1000);
+
+    // Run Firebase logic in background
     const dataToSend = {
-      ...formData,
+      name: formData.name.trim(),
+      age: Number(formData.age),
+    //   location: formData.location.trim(),
+      experience: formData.experience.trim(),
       hub: hub.name,
       role: hub.role,
       timestamp: new Date().toISOString(),
     };
 
     try {
-      // Save applicant to 'employees' collection
       await addDoc(collection(db, "employees"), dataToSend);
-
-      // Increment totalEmployees in corresponding regionalHubs doc
       const hubRef = doc(db, "regionalHubs", hub.name);
-      await setDoc(
-        hubRef,
-        { totalEmployees: increment(1) },
-        { merge: true }
-      );
-
-      // Reset form and show thank you
-      setFormData({ name: "", age: "", location: "", experience: "" });
-      setErrors({});
-      setShowThankYou(true);
-
-      // Auto-close dialog after 2 seconds
-      setTimeout(() => {
-        setShowThankYou(false);
-        onClose();
-      }, 4000);
+      await setDoc(hubRef, { totalEmployees: increment(1) }, { merge: true });
     } catch (error) {
-      console.error("Error submitting application:", error);
-      alert("Something went wrong. Please try again.");
+      console.error("❌ Error adding employee to Firestore:", error.message);
     }
   };
+
+  if (!hub) return null;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -137,7 +137,7 @@ const ApplicationForm = ({ open, onClose, hub }) => {
                 helperText={errors.age}
               />
 
-              <TextField
+              {/* <TextField
                 name="location"
                 label="Location"
                 value={formData.location}
@@ -146,7 +146,7 @@ const ApplicationForm = ({ open, onClose, hub }) => {
                 required
                 error={!!errors.location}
                 helperText={errors.location}
-              />
+              /> */}
 
               <TextField
                 name="experience"
