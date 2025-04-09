@@ -16,7 +16,7 @@ import {
   Instagram,
   Pinterest,
 } from "@mui/icons-material";
-import footerBg from "../assets/Footer_Bg.jpg"; // Make sure the correct background is used
+import footerBg from "../assets/Footer.png"; // Make sure the correct background is used
 
 const Footer = () => {
   return (
