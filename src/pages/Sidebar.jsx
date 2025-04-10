@@ -41,17 +41,15 @@ import PlantDoctor from "./sidebar/PlantDoctor";
 import MultilingualAgriBot from "./sidebar/MultilingualAgriBot";
 import RegionalResourceHubs from "./sidebar/RegionalResourceHubs";
 import CarbonCreditMonetization from "./sidebar/CarbonCreditMonetization";
-import DashboardHome from "./sidebar/DashboardHome";
+
 import MapPage from "../regionalhub/MapPage";
 
 // Theme colors
 const primaryGreen = '#2e7d32';
 const darkGreen = '#1b5e20';
-const lightGreen = '#a5d6a7';
 const background = '#f5f5f5';
 const cardBackground = '#ffffff';
 const textPrimary = '#333333';
-const textSecondary = '#666666';
 
 const expandedWidth = 260;
 const collapsedWidth = 80;
@@ -99,7 +97,7 @@ function Sidebar({ onLogout, userEmail }) {
   };
 
   const menuItems = [
-    { text: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
+   
     { text: "Climate AI Forecast", path: "/dashboard/climate-forecast", icon: <Cloud /> },
     { text: "Plant Doctor", path: "/dashboard/plant-doctor", icon: <LocalFlorist /> },
     { text: "Multilingual AgriBot", path: "/dashboard/agri-bot", icon: <Translate /> },
@@ -392,7 +390,7 @@ function Sidebar({ onLogout, userEmail }) {
           }}
         >
           <Routes>
-            <Route path="/" element={<DashboardHome />} />
+           
             <Route path="climate-forecast" element={<ClimateAIForecast />} />
             <Route path="plant-doctor" element={<PlantDoctor />} />
             <Route path="agri-bot" element={<MultilingualAgriBot />} />

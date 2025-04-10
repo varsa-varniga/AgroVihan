@@ -22,12 +22,14 @@ import {
 import farmBg from "../../assets/farm.png";
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+// Import Firebase
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 
 // Theme colors
 const primaryGreen = '#4CAF50';
 const darkGreen = '#388E3C';
-const lightGreen = '#8BC34A';
-const background = '#f5f5f5';
+const background = '#f1f8e9';
 const cardBackground = '#ffffff';
 const textPrimary = '#333333';
 const textSecondary = '#666666';
@@ -86,6 +88,12 @@ const ClimateAIForecast = () => {
   const [forecast, setForecast] = useState([]);
   const [tempData, setTempData] = useState([]);
   const [uvIndex, setUvIndex] = useState(5); // Default UV value in case API fails
+  // Add state for user data
+  const [userData, setUserData] = useState({
+    name: "Loading...",
+    location: "Loading..."
+  });
+  const [userAvatar, setUserAvatar] = useState(null);
 
   const API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
   const lat = 11.0168;
@@ -102,6 +110,58 @@ const ClimateAIForecast = () => {
       default: return "🌈";
     }
   }
+  
+  // Add useEffect for Firebase authentication and user data
+  useEffect(() => {
+    const auth = getAuth();
+    const db = getFirestore();
+    
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in
+        try {
+          // Try to get user data from Firestore
+          const userDocRef = doc(db, "users", user.uid);
+          const userDoc = await getDoc(userDocRef);
+          
+          if (userDoc.exists()) {
+            // User data exists in Firestore
+            const userData = userDoc.data();
+            setUserData({
+              name: userData.name || user.displayName || user.email.split('@')[0],
+              location: userData.location || "Unknown Location"
+            });
+            setUserAvatar(userData.photoURL || user.photoURL);
+          } else {
+            // No user document but user is authenticated
+            setUserData({
+              name: user.displayName || user.email.split('@')[0],
+              location: "Unknown Location"
+            });
+            setUserAvatar(user.photoURL);
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          // Fallback to auth user data
+          setUserData({
+            name: user.displayName || user.email.split('@')[0],
+            location: "Unknown Location"
+          });
+          setUserAvatar(user.photoURL);
+        }
+      } else {
+        // User is signed out, set default data
+        setUserData({
+          name: "Guest User",
+          location: "Unknown Location"
+        });
+        setUserAvatar(null);
+      }
+    });
+    
+    // Cleanup subscription
+    return () => unsubscribe();
+  }, []);
  
   useEffect(() => {
     const fetchWeatherAndForecast = async () => {
@@ -267,7 +327,7 @@ const ClimateAIForecast = () => {
       sx={{
         display: "flex",
         minHeight: "100vh",
-        backgroundColor: background,
+        backgroundColor: '#f1f8f4',
         color: textPrimary,
         fontFamily: "'Roboto', sans-serif",
         p: { xs: 1, md: 3 },
@@ -289,7 +349,7 @@ const ClimateAIForecast = () => {
             color: darkGreen,
             mb: 1
           }}>
-            Clayton Walter
+            {userData.name}
           </Typography>
 
           <Typography variant="body1" sx={{ 
@@ -297,7 +357,7 @@ const ClimateAIForecast = () => {
             fontSize: "1.1rem",
             color: textSecondary
           }}>
-            Alaska, Croatia
+            {userData.location}
           </Typography>
           <Box
             sx={{
@@ -477,7 +537,7 @@ const ClimateAIForecast = () => {
             </Typography>
           </Box>
           <Avatar 
-            src="https://i.pravatar.cc/150?img=3" 
+            src={userAvatar || "https://i.pravatar.cc/150?img=3"} 
             sx={{ 
               width: 56, 
               height: 56,
