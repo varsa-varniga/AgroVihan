@@ -1,3 +1,15 @@
+<<<<<<< HEAD
+// src/pages/sidebar/ClimateAIForecast.jsx
+
+import React from "react";
+
+const ClimateAIForecast = () => {
+  return (
+    <div>
+      <h1>Climate AI Forecast</h1>
+      {/* Your content here */}
+    </div>
+=======
 import {
   Box,
   Typography,
@@ -79,6 +91,7 @@ const UVGauge = ({ value }) => {
         {value || 0} UV
       </Box>
     </Box>
+>>>>>>> 92282369dfa3f4214094b68eef9505a11f064ba6
   );
 };
 
