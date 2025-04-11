@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 // Auth pages
 import GoogleLogin from "./Authentication/GoogleLogin.jsx";
 import Login from './Authentication/Login.jsx';
+import './App.css'
+
 
 // Public pages
 import AboutUs from './pages/AboutUs.jsx';
