@@ -1,14 +1,23 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import GoogleLogin from "./Authentication/GoogleLogin.jsx";
-import Navbar from "./Components/Navbar.jsx";
-import Login from "./Authentication/Login.jsx";
-import AboutUs from "./pages/AboutUs.jsx";
-import HeroPage from "./pages/Heropage.jsx";
-import "./index.css";
-import Footer from "./Components/Footer.jsx";
-import Welcome from "./pages/Welcome.jsx";
-import Sidebar from "./pages/Sidebar.jsx";
 import { useState, useEffect } from "react";
+
+// Auth pages
+import GoogleLogin from "./Authentication/GoogleLogin.jsx";
+import Login from './Authentication/Login.jsx';
+import './App.css'
+
+
+// Public pages
+import AboutUs from './pages/AboutUs.jsx';
+import HeroPage from './pages/Heropage.jsx';
+import Welcome from './pages/Welcome.jsx';
+
+// Dashboard (Protected)
+import Sidebar from './pages/Sidebar.jsx';
+
+// Common layout
+import Layout from './Components/Layout.jsx';
+
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -33,28 +42,16 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public routes */}
-        <Route
-          path="/"
-          element={
-            <>
-              <Navbar isLoggedIn={isLoggedIn} onLogout={handleLogout} />
-              <HeroPage />
-              <Welcome />
-              <AboutUs />
-              <Footer />
-            </>
-          }
-        />
+        {/* Layout for public pages (with Navbar/Footer) */}
+        <Route element={<Layout isLoggedIn={isLoggedIn} onLogout={handleLogout} />}>
+          <Route path="/" element={<HeroPage />} />
+          <Route path="/features" element={<Welcome />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/login" element={<Login onLogin={handleLogin} />} />
+          <Route path="/google-login" element={<GoogleLogin onLogin={handleLogin} />} />
+        </Route>
 
-        <Route path="/login" element={<Login onLogin={handleLogin} />} />
-
-        <Route
-          path="/google-login"
-          element={<GoogleLogin onLogin={handleLogin} />}
-        />
-
-        {/* Protected routes */}
+        {/* Protected route */}
         <Route
           path="/dashboard/*"
           element={

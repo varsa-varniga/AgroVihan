@@ -3,9 +3,12 @@ import { Container, Typography, Box } from '@mui/material';
 import backgroundImage from '../assets/AboutUsBg.jpg';
 
 
+
 const OurStory = () => {
+    
   return (
     <Box
+    
       sx={{
         backgroundImage: `url(${backgroundImage})`,
         backgroundSize: 'cover',
