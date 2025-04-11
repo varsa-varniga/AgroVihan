@@ -13,7 +13,6 @@ import { useState, useEffect } from "react";
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-
   useEffect(() => {
     const loggedInStatus = localStorage.getItem("isLoggedIn");
     if (loggedInStatus === "true") {

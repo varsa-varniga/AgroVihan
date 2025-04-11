@@ -53,7 +53,7 @@ const HowItWorks = ({ isMobile }) => {
 
       <Stepper
         orientation={isMobile ? "vertical" : "horizontal"}
-        sx={{ mb: 4 }}
+        sx={{ mb: 4, display: "flex", justifyContent: "space-between" }}
         connector={
           isMobile ? null : (
             <Divider

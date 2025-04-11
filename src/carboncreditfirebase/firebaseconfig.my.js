@@ -15,6 +15,7 @@ const firebaseConfig = {
 // ✅ Prevent duplicate app initialization
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
+
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 const db = getFirestore(app);

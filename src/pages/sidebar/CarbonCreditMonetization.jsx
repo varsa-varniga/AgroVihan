@@ -14,19 +14,12 @@ import {
   Paper,
   IconButton,
   CircularProgress,
-  Avatar,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
   Stepper,
   Step,
   StepLabel,
   Badge,
   Fade,
   Zoom,
-  Slide,
-  Grow,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -36,7 +29,6 @@ import {
 } from "@mui/material";
 import {
   Calculate as CalculateIcon,
-  AccountCircle as AccountCircleIcon,
   Agriculture as AgricultureIcon,
   WaterDrop as WaterDropIcon,
   Build as BuildIcon,
@@ -51,18 +43,18 @@ import {
   Info as InfoIcon,
   Close as CloseIcon,
   Share as ShareIcon,
-  Facebook,
-  Twitter,
-  Instagram,
-  LinkedIn,
   AutoGraph as AutoGraphIcon,
   Verified as VerifiedIcon,
   Science as ScienceIcon,
+  Park as ParkIcon,
+  Grass as GrassIcon,
+  ElectricBolt as ElectricBoltIcon,
+  EnergySavingsLeaf as EnergySavingsLeafIcon,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { alpha } from "@mui/material/styles";
-import HowItWorks from "../../Components/carboncreditworks"; // Import the HowItWorks component
-import FAQ from "../../Components/carboncreditfaq"; // Import the FAQ component
+import HowItWorks from "../../Components/carboncreditworks";
+import FAQ from "../../Components/carboncreditfaq";
 import { useState, useEffect } from "react";
 
 import { db } from "../../carboncreditfirebase/firebaseconfig.my";
@@ -93,10 +85,14 @@ const FarmerCarbonCreditCalculator = () => {
   const userEmail = user?.email;
   const username = user?.displayName || "Anonymous";
   const [formData, setFormData] = useState({
-    cropType: "",
-    fertilizerType: "",
-    irrigationType: "",
-    equipmentUsed: "",
+    treesPlanted: 0,
+    organicFertilizerAcres: 0,
+    solarPumps: 0,
+    noTillAcres: 0,
+    coverCropAcres: 0,
+    cowsReduced: 0,
+    rainwaterHarvesting: false,
+    electricPumps: 0,
   });
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -107,171 +103,20 @@ const FarmerCarbonCreditCalculator = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [showDashboard, setShowDashboard] = useState(false);
 
-  const cropTypes = [
-    {
-      value: "wheat",
-      label: "Wheat",
-      icon: <AgricultureIcon />,
-      impact: 0,
-      info: "Traditional wheat farming with moderate carbon impact",
-    },
-    {
-      value: "rice",
-      label: "Rice",
-      icon: <AgricultureIcon />,
-      impact: 0,
-      info: "Rice paddies can produce methane, a potent greenhouse gas",
-    },
-    {
-      value: "sugarcane",
-      label: "Sugarcane",
-      icon: <AgricultureIcon />,
-      impact: 0,
-      info: "Sugarcane farming often involves burning which releases CO2",
-    },
-    {
-      value: "maize",
-      label: "Maize",
-      icon: <AgricultureIcon />,
-      impact: 0,
-      info: "Corn production with standard environmental impact",
-    },
-    {
-      value: "pulses",
-      label: "Pulses",
-      icon: <AgricultureIcon />,
-      impact: +5,
-      info: "Legumes fix nitrogen in soil, reducing need for fertilizers",
-    },
-    {
-      value: "cotton",
-      label: "Cotton",
-      icon: <AgricultureIcon />,
-      impact: 0,
-      info: "Cotton farming typically requires significant water and pesticides",
-    },
-    {
-      value: "vegetables",
-      label: "Vegetables",
-      icon: <AgricultureIcon />,
-      impact: +3,
-      info: "Vegetable farming generally has lower carbon footprint",
-    },
-    {
-      value: "fruits",
-      label: "Fruits",
-      icon: <AgricultureIcon />,
-      impact: +5,
-      info: "Perennial fruit trees sequester carbon over time",
-    },
-  ];
+  // Carbon credit calculation constants
+  const CARBON_CREDIT_RATE = 1000; // 1 credit = 1000 kg CO2
+  const CALCULATION_VALUES = {
+    treesPlanted: 21, // kg CO2 per tree per year
+    organicFertilizer: 110, // kg CO2 per acre per year
+    solarPump: 1500, // kg CO2 per pump per year
+    noTillFarming: 300, // kg CO2 per acre per year
+    coverCropping: 250, // kg CO2 per acre per year
+    cowReduction: 1200, // kg CO2 per cow per year
+    rainwaterHarvesting: 200, // kg CO2 per system per year
+    electricPump: 1000, // kg CO2 per pump per year
+  };
 
-  const fertilizerTypes = [
-    {
-      value: "organic",
-      label: "Organic Fertilizer",
-      icon: <NatureIcon />,
-      impact: +20,
-      info: "Made from natural sources, improves soil health",
-    },
-    {
-      value: "chemical",
-      label: "Chemical Fertilizer",
-      icon: <BuildIcon />,
-      impact: 0,
-      info: "Synthetic fertilizers have high production emissions",
-    },
-    {
-      value: "compost",
-      label: "Compost",
-      icon: <LocalFloristIcon />,
-      impact: +15,
-      info: "Recycles organic waste, enriches soil microbiome",
-    },
-    {
-      value: "green_manure",
-      label: "Green Manure",
-      icon: <NatureIcon />,
-      impact: +10,
-      info: "Cover crops plowed back into soil to add nutrients",
-    },
-  ];
-
-  const irrigationTypes = [
-    {
-      value: "drip",
-      label: "Drip Irrigation",
-      icon: <WaterDropIcon />,
-      impact: +15,
-      info: "Most efficient method, reduces water usage by 30-60%",
-    },
-    {
-      value: "sprinkler",
-      label: "Sprinkler",
-      icon: <WaterDropIcon />,
-      impact: +10,
-      info: "Moderately efficient but can lose water to evaporation",
-    },
-    {
-      value: "flood",
-      label: "Flood Irrigation",
-      icon: <WaterDropIcon />,
-      impact: 0,
-      info: "Traditional method with significant water loss",
-    },
-    {
-      value: "rainfed",
-      label: "Rainfed",
-      icon: <WaterDropIcon />,
-      impact: +5,
-      info: "No irrigation energy costs but dependent on rainfall",
-    },
-  ];
-
-  const equipmentUsed = [
-    {
-      value: "solar_pump",
-      label: "Solar Pump",
-      icon: <BuildIcon />,
-      impact: +25,
-      info: "Renewable energy powered, zero emissions",
-    },
-    {
-      value: "electric_tractor",
-      label: "Electric Tractor",
-      icon: <BuildIcon />,
-      impact: +20,
-      info: "Clean alternative to diesel, lower maintenance",
-    },
-    {
-      value: "no_tilling",
-      label: "No Tillage",
-      icon: <BuildIcon />,
-      impact: +10,
-      info: "Preserves soil structure and carbon content",
-    },
-    {
-      value: "manual_tools",
-      label: "Manual Tools",
-      icon: <BuildIcon />,
-      impact: +5,
-      info: "No fuel use but labor intensive",
-    },
-    {
-      value: "diesel_tractor",
-      label: "Diesel Tractor",
-      icon: <BuildIcon />,
-      impact: 0,
-      info: "Standard equipment with significant emissions",
-    },
-  ];
-
-  const saveCarbonData = async (
-    email,
-    username,
-    carbonScore,
-    creditsEarned
-  ) => {
+  const saveCarbonData = async (email, username, carbonCredits, co2Saved) => {
     try {
       console.log("🚀 Saving data for:", email);
 
@@ -281,24 +126,41 @@ const FarmerCarbonCreditCalculator = () => {
       const q = query(userCollection, where("email", "==", email));
       const querySnapshot = await getDocs(q);
 
-      let totalCredits = creditsEarned;
+      let totalCredits = carbonCredits;
+      let totalCO2 = co2Saved;
+
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.creditsEarned) {
-          totalCredits += data.creditsEarned;
+        if (data.carbonCredits) {
+          totalCredits += data.carbonCredits;
+        }
+        if (data.co2Saved) {
+          totalCO2 += data.co2Saved;
         }
       });
 
       console.log("🧮 Total credits after addition:", totalCredits);
 
+      const calculateScore = (co2Saved) => {
+        // Simple scoring logic - adjust as needed
+        if (co2Saved > 5000) return 90;
+        if (co2Saved > 2000) return 75;
+        if (co2Saved > 1000) return 60;
+        return 50;
+      };
+
       // Step 2: Add new document
       const docRef = await addDoc(userCollection, {
         email,
         username,
-        carbonScore,
-        creditsEarned,
+        carbonCredits,
+        co2Saved,
+        creditsEarned: carbonCredits,
         timestamp: Timestamp.now(),
+        carbonScore: calculateScore(co2Saved),
         totalCredits,
+        totalCO2,
+        details: formData,
       });
 
       console.log("✅ Data saved successfully to Firestore!");
@@ -309,10 +171,10 @@ const FarmerCarbonCreditCalculator = () => {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -320,47 +182,58 @@ const FarmerCarbonCreditCalculator = () => {
     setSelectedInfo(info);
     setOpenInfo(true);
   };
+
   const calculateCredits = async () => {
     setLoading(true);
     setTimeout(async () => {
-      const cropImpact =
-        cropTypes.find((c) => c.value === formData.cropType)?.impact || 0;
-      const fertilizerImpact =
-        fertilizerTypes.find((f) => f.value === formData.fertilizerType)
-          ?.impact || 0;
-      const irrigationImpact =
-        irrigationTypes.find((i) => i.value === formData.irrigationType)
-          ?.impact || 0;
-      const equipmentImpact =
-        equipmentUsed.find((e) => e.value === formData.equipmentUsed)?.impact ||
-        0;
+      // Calculate CO2 savings for each practice
+      const treesCO2 = formData.treesPlanted * CALCULATION_VALUES.treesPlanted;
+      const organicFertCO2 =
+        formData.organicFertilizerAcres * CALCULATION_VALUES.organicFertilizer;
+      const solarPumpCO2 = formData.solarPumps * CALCULATION_VALUES.solarPump;
+      const noTillCO2 = formData.noTillAcres * CALCULATION_VALUES.noTillFarming;
+      const coverCropCO2 =
+        formData.coverCropAcres * CALCULATION_VALUES.coverCropping;
+      const cowReductionCO2 =
+        formData.cowsReduced * CALCULATION_VALUES.cowReduction;
+      const rainwaterCO2 = formData.rainwaterHarvesting
+        ? CALCULATION_VALUES.rainwaterHarvesting
+        : 0;
+      const electricPumpCO2 =
+        formData.electricPumps * CALCULATION_VALUES.electricPump;
 
-      const baseScore = 50;
-      const score = Math.min(
-        baseScore +
-          cropImpact +
-          fertilizerImpact +
-          irrigationImpact +
-          equipmentImpact,
-        100
-      );
+      // Total CO2 saved in kg
+      const totalCO2 =
+        treesCO2 +
+        organicFertCO2 +
+        solarPumpCO2 +
+        noTillCO2 +
+        coverCropCO2 +
+        cowReductionCO2 +
+        rainwaterCO2 +
+        electricPumpCO2;
 
-      const credits = Math.floor(score / 10);
+      // Calculate carbon credits (1 credit = 1000 kg CO2)
+      const credits = totalCO2 / CARBON_CREDIT_RATE;
 
       setResults({
-        score,
+        totalCO2,
         credits,
         timestamp: new Date().toLocaleString(),
         details: {
-          cropImpact,
-          fertilizerImpact,
-          irrigationImpact,
-          equipmentImpact,
+          treesCO2,
+          organicFertCO2,
+          solarPumpCO2,
+          noTillCO2,
+          coverCropCO2,
+          cowReductionCO2,
+          rainwaterCO2,
+          electricPumpCO2,
         },
       });
 
-      // 🔥 Save to Firebase (replace with actual logged-in user data)
-      await saveCarbonData(userEmail, username, score, credits);
+      // Save to Firebase
+      await saveCarbonData(userEmail, username, credits, totalCO2);
 
       setLoading(false);
     }, 1500);
@@ -381,6 +254,24 @@ const FarmerCarbonCreditCalculator = () => {
 
   const shareResults = () => {
     alert("Share functionality would be implemented here");
+  };
+
+  // Helper function to get environmental impact statements
+  const getImpactStatements = (co2) => {
+    const statements = [];
+    const treesEquivalent = Math.round(co2 / CALCULATION_VALUES.treesPlanted);
+    const carsEquivalent = (co2 / 2000).toFixed(1); // Average car emits ~2 tons CO2/year
+
+    if (treesEquivalent > 0) {
+      statements.push(`Equivalent to ${treesEquivalent} trees planted`);
+    }
+    if (carsEquivalent > 0.1) {
+      statements.push(
+        `Like removing ${carsEquivalent} cars from the road for a year`
+      );
+    }
+
+    return statements;
   };
 
   return (
@@ -468,300 +359,265 @@ const FarmerCarbonCreditCalculator = () => {
             <CardContent sx={{ p: isMobile ? 2 : 4 }}>
               {/* Form Section */}
               <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
+                {/* Trees Planted */}
+                <Grid item xs={12} sm={6}>
                   <TextField
-                    select
                     fullWidth
-                    label="Crop Type"
-                    name="cropType"
-                    value={formData.cropType}
+                    label="Number of Trees Planted"
+                    name="treesPlanted"
+                    type="number"
+                    value={formData.treesPlanted}
+                    onChange={handleChange}
+                    variant="outlined"
+                    InputProps={{
+                      startAdornment: (
+                        <ParkIcon sx={{ color: "#388e3c", mr: 1 }} />
+                      ),
+                      endAdornment: (
+                        <IconButton
+                          onClick={() =>
+                            showInfo(
+                              "Each tree planted absorbs approximately 21 kg of CO₂ per year"
+                            )
+                          }
+                        >
+                          <InfoIcon color="action" />
+                        </IconButton>
+                      ),
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                          borderColor: "#81c784",
+                        },
+                        "&:hover fieldset": {
+                          borderColor: "#66bb6a",
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+
+                {/* Organic Fertilizer Acres */}
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Acres Using Organic Fertilizers"
+                    name="organicFertilizerAcres"
+                    type="number"
+                    value={formData.organicFertilizerAcres}
+                    onChange={handleChange}
+                    variant="outlined"
+                    InputProps={{
+                      startAdornment: (
+                        <NatureIcon sx={{ color: "#388e3c", mr: 1 }} />
+                      ),
+                      endAdornment: (
+                        <IconButton
+                          onClick={() =>
+                            showInfo(
+                              "Organic fertilizers reduce nitrous oxide emissions, saving ~110 kg CO₂ per acre per year"
+                            )
+                          }
+                        >
+                          <InfoIcon color="action" />
+                        </IconButton>
+                      ),
+                    }}
+                  />
+                </Grid>
+
+                {/* Solar Pumps */}
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Number of Solar Pumps"
+                    name="solarPumps"
+                    type="number"
+                    value={formData.solarPumps}
+                    onChange={handleChange}
+                    variant="outlined"
+                    InputProps={{
+                      startAdornment: (
+                        <ElectricBoltIcon sx={{ color: "#388e3c", mr: 1 }} />
+                      ),
+                      endAdornment: (
+                        <IconButton
+                          onClick={() =>
+                            showInfo(
+                              "Each solar pump replaces a diesel pump, saving ~1,500 kg CO₂ per year"
+                            )
+                          }
+                        >
+                          <InfoIcon color="action" />
+                        </IconButton>
+                      ),
+                    }}
+                  />
+                </Grid>
+
+                {/* No-Till Acres */}
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Acres of No-Till Farming"
+                    name="noTillAcres"
+                    type="number"
+                    value={formData.noTillAcres}
+                    onChange={handleChange}
+                    variant="outlined"
+                    InputProps={{
+                      startAdornment: (
+                        <GrassIcon sx={{ color: "#388e3c", mr: 1 }} />
+                      ),
+                      endAdornment: (
+                        <IconButton
+                          onClick={() =>
+                            showInfo(
+                              "No-till farming reduces soil carbon loss, saving ~300 kg CO₂ per acre per year"
+                            )
+                          }
+                        >
+                          <InfoIcon color="action" />
+                        </IconButton>
+                      ),
+                    }}
+                  />
+                </Grid>
+
+                {/* Cover Crop Acres */}
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Acres of Cover Cropping"
+                    name="coverCropAcres"
+                    type="number"
+                    value={formData.coverCropAcres}
+                    onChange={handleChange}
+                    variant="outlined"
+                    InputProps={{
+                      startAdornment: (
+                        <LocalFloristIcon sx={{ color: "#388e3c", mr: 1 }} />
+                      ),
+                      endAdornment: (
+                        <IconButton
+                          onClick={() =>
+                            showInfo(
+                              "Cover cropping adds organic matter to soil, saving ~250 kg CO₂ per acre per year"
+                            )
+                          }
+                        >
+                          <InfoIcon color="action" />
+                        </IconButton>
+                      ),
+                    }}
+                  />
+                </Grid>
+
+                {/* Cows Reduced */}
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Cows Reduced (Methane Management)"
+                    name="cowsReduced"
+                    type="number"
+                    value={formData.cowsReduced}
                     onChange={handleChange}
                     variant="outlined"
                     InputProps={{
                       startAdornment: (
                         <AgricultureIcon sx={{ color: "#388e3c", mr: 1 }} />
                       ),
-                    }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
-                          borderColor: "#81c784",
-                        },
-                        "&:hover fieldset": {
-                          borderColor: "#66bb6a",
-                        },
-                      },
-                    }}
-                  >
-                    <MenuItem value="">
-                      <em>Select Crop Type</em>
-                    </MenuItem>
-                    {cropTypes.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            width: "100%",
-                          }}
+                      endAdornment: (
+                        <IconButton
+                          onClick={() =>
+                            showInfo(
+                              "Each cow reduced saves ~1,200 kg CO₂ equivalent per year from methane emissions"
+                            )
+                          }
                         >
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <span style={{ marginRight: 8 }}>
-                              {option.icon}
-                            </span>
-                            {option.label}
-                          </Box>
-                          <Box>
-                            {option.impact > 0 && (
-                              <Chip
-                                label={`+${option.impact}`}
-                                size="small"
-                                sx={{
-                                  ml: 1,
-                                  backgroundColor: "#e8f5e9",
-                                  color: "#2e7d32",
-                                  fontWeight: "bold",
-                                }}
-                              />
-                            )}
-                            <IconButton
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                showInfo(option.info);
-                              }}
-                              sx={{ ml: 1 }}
-                            >
-                              <InfoIcon fontSize="small" color="action" />
-                            </IconButton>
-                          </Box>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                          <InfoIcon color="action" />
+                        </IconButton>
+                      ),
+                    }}
+                  />
                 </Grid>
 
-                <Grid item xs={12} md={6}>
+                {/* Rainwater Harvesting */}
+                <Grid item xs={12} sm={6}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      border: "1px solid rgba(0, 0, 0, 0.23)",
+                      borderRadius: "4px",
+                      padding: "16.5px 14px",
+                      backgroundColor: formData.rainwaterHarvesting
+                        ? "#e8f5e9"
+                        : "inherit",
+                    }}
+                  >
+                    <WaterDropIcon sx={{ color: "#388e3c", mr: 1 }} />
+                    <Typography sx={{ flexGrow: 1 }}>
+                      Rainwater Harvesting
+                    </Typography>
+                    <IconButton
+                      onClick={() =>
+                        showInfo(
+                          "Rainwater harvesting reduces energy for water pumping, saving ~200 kg CO₂ per year"
+                        )
+                      }
+                      sx={{ mr: 1 }}
+                    >
+                      <InfoIcon color="action" />
+                    </IconButton>
+                    <Button
+                      variant={
+                        formData.rainwaterHarvesting ? "contained" : "outlined"
+                      }
+                      color="success"
+                      size="small"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          rainwaterHarvesting: !prev.rainwaterHarvesting,
+                        }))
+                      }
+                    >
+                      {formData.rainwaterHarvesting ? "Yes" : "No"}
+                    </Button>
+                  </Box>
+                </Grid>
+
+                {/* Electric Pumps */}
+                <Grid item xs={12} sm={6}>
                   <TextField
-                    select
                     fullWidth
-                    label="Fertilizer Type"
-                    name="fertilizerType"
-                    value={formData.fertilizerType}
+                    label="Electric Pumps (replacing diesel)"
+                    name="electricPumps"
+                    type="number"
+                    value={formData.electricPumps}
                     onChange={handleChange}
                     variant="outlined"
                     InputProps={{
                       startAdornment: (
-                        <ScienceIcon sx={{ color: "#388e3c", mr: 1 }} />
+                        <EnergySavingsLeafIcon
+                          sx={{ color: "#388e3c", mr: 1 }}
+                        />
+                      ),
+                      endAdornment: (
+                        <IconButton
+                          onClick={() =>
+                            showInfo(
+                              "Each electric pump replacing diesel saves ~1,000 kg CO₂ per year"
+                            )
+                          }
+                        >
+                          <InfoIcon color="action" />
+                        </IconButton>
                       ),
                     }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
-                          borderColor: "#81c784",
-                        },
-                        "&:hover fieldset": {
-                          borderColor: "#66bb6a",
-                        },
-                      },
-                    }}
-                  >
-                    <MenuItem value="">
-                      <em>Select Fertilizer Type</em>
-                    </MenuItem>
-                    {fertilizerTypes.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            width: "100%",
-                          }}
-                        >
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <span style={{ marginRight: 8 }}>
-                              {option.icon}
-                            </span>
-                            {option.label}
-                          </Box>
-                          <Box>
-                            {option.impact > 0 && (
-                              <Chip
-                                label={`+${option.impact}`}
-                                size="small"
-                                sx={{
-                                  ml: 1,
-                                  backgroundColor: "#e8f5e9",
-                                  color: "#2e7d32",
-                                  fontWeight: "bold",
-                                }}
-                              />
-                            )}
-                            <IconButton
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                showInfo(option.info);
-                              }}
-                              sx={{ ml: 1 }}
-                            >
-                              <InfoIcon fontSize="small" color="action" />
-                            </IconButton>
-                          </Box>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    select
-                    fullWidth
-                    label="Irrigation Type"
-                    name="irrigationType"
-                    value={formData.irrigationType}
-                    onChange={handleChange}
-                    variant="outlined"
-                    InputProps={{
-                      startAdornment: (
-                        <WaterDropIcon sx={{ color: "#388e3c", mr: 1 }} />
-                      ),
-                    }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
-                          borderColor: "#81c784",
-                        },
-                        "&:hover fieldset": {
-                          borderColor: "#66bb6a",
-                        },
-                      },
-                    }}
-                  >
-                    <MenuItem value="">
-                      <em>Select Irrigation Type</em>
-                    </MenuItem>
-                    {irrigationTypes.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            width: "100%",
-                          }}
-                        >
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <span style={{ marginRight: 8 }}>
-                              {option.icon}
-                            </span>
-                            {option.label}
-                          </Box>
-                          <Box>
-                            {option.impact > 0 && (
-                              <Chip
-                                label={`+${option.impact}`}
-                                size="small"
-                                sx={{
-                                  ml: 1,
-                                  backgroundColor: "#e8f5e9",
-                                  color: "#2e7d32",
-                                  fontWeight: "bold",
-                                }}
-                              />
-                            )}
-                            <IconButton
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                showInfo(option.info);
-                              }}
-                              sx={{ ml: 1 }}
-                            >
-                              <InfoIcon fontSize="small" color="action" />
-                            </IconButton>
-                          </Box>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    select
-                    fullWidth
-                    label="Equipment Used"
-                    name="equipmentUsed"
-                    value={formData.equipmentUsed}
-                    onChange={handleChange}
-                    variant="outlined"
-                    InputProps={{
-                      startAdornment: (
-                        <BuildIcon sx={{ color: "#388e3c", mr: 1 }} />
-                      ),
-                    }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
-                          borderColor: "#81c784",
-                        },
-                        "&:hover fieldset": {
-                          borderColor: "#66bb6a",
-                        },
-                      },
-                    }}
-                  >
-                    <MenuItem value="">
-                      <em>Select Equipment Used</em>
-                    </MenuItem>
-                    {equipmentUsed.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            width: "100%",
-                          }}
-                        >
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <span style={{ marginRight: 8 }}>
-                              {option.icon}
-                            </span>
-                            {option.label}
-                          </Box>
-                          <Box>
-                            {option.impact > 0 && (
-                              <Chip
-                                label={`+${option.impact}`}
-                                size="small"
-                                sx={{
-                                  ml: 1,
-                                  backgroundColor: "#e8f5e9",
-                                  color: "#2e7d32",
-                                  fontWeight: "bold",
-                                }}
-                              />
-                            )}
-                            <IconButton
-                              size="small"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                showInfo(option.info);
-                              }}
-                              sx={{ ml: 1 }}
-                            >
-                              <InfoIcon fontSize="small" color="action" />
-                            </IconButton>
-                          </Box>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                  />
                 </Grid>
               </Grid>
 
@@ -777,13 +633,7 @@ const FarmerCarbonCreditCalculator = () => {
                     size="large"
                     startIcon={<CalculateIcon />}
                     onClick={calculateCredits}
-                    disabled={
-                      loading ||
-                      !formData.cropType ||
-                      !formData.fertilizerType ||
-                      !formData.irrigationType ||
-                      !formData.equipmentUsed
-                    }
+                    disabled={loading}
                     sx={{
                       py: 2,
                       px: 6,
@@ -853,66 +703,43 @@ const FarmerCarbonCreditCalculator = () => {
                       <Grid container spacing={2}>
                         <Grid item xs={12} sm={6}>
                           <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <AutoGraphIcon
-                              sx={{ color: "#388e3c", mr: 1, fontSize: "2rem" }}
-                            />
-                            <Box>
-                              <Typography variant="body1">
-                                <span style={{ fontWeight: "bold" }}>
-                                  Carbon Score:
-                                </span>
-                              </Typography>
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  mt: 0.5,
-                                }}
-                              >
-                                <Typography
-                                  variant="h4"
-                                  sx={{ fontWeight: "bold", mr: 1 }}
-                                >
-                                  {results.score}/100
-                                </Typography>
-                                <Chip
-                                  label={
-                                    results.score > 80
-                                      ? "Excellent"
-                                      : results.score > 60
-                                      ? "Good"
-                                      : "Needs Improvement"
-                                  }
-                                  color={
-                                    results.score > 80
-                                      ? "success"
-                                      : results.score > 60
-                                      ? "warning"
-                                      : "error"
-                                  }
-                                  size="small"
-                                  sx={{ fontWeight: "bold" }}
-                                />
-                              </Box>
-                            </Box>
-                          </Box>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
                             <MonetizationOnIcon
                               sx={{ color: "#388e3c", mr: 1, fontSize: "2rem" }}
                             />
                             <Box>
                               <Typography variant="body1">
                                 <span style={{ fontWeight: "bold" }}>
-                                  Credits Earned:
+                                  Carbon Credits Earned:
                                 </span>
                               </Typography>
                               <Typography
                                 variant="h4"
                                 sx={{ fontWeight: "bold", mt: 0.5 }}
                               >
-                                {results.credits} FC
+                                {results.credits.toFixed(2)} CC
+                              </Typography>
+                              <Typography variant="caption">
+                                (1 CC = 1,000 kg CO₂ saved)
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Box sx={{ display: "flex", alignItems: "center" }}>
+                            <AutoGraphIcon
+                              sx={{ color: "#388e3c", mr: 1, fontSize: "2rem" }}
+                            />
+                            <Box>
+                              <Typography variant="body1">
+                                <span style={{ fontWeight: "bold" }}>
+                                  Total CO₂ Saved:
+                                </span>
+                              </Typography>
+                              <Typography
+                                variant="h4"
+                                sx={{ fontWeight: "bold", mt: 0.5 }}
+                              >
+                                {results.totalCO2.toFixed(0)} kg
                               </Typography>
                             </Box>
                           </Box>
@@ -934,9 +761,24 @@ const FarmerCarbonCreditCalculator = () => {
                             </Typography>
                           </Box>
                         </Grid>
+
+                        {/* Environmental Impact Statements */}
+                        {getImpactStatements(results.totalCO2).map(
+                          (statement, index) => (
+                            <Grid item xs={12} key={index}>
+                              <Chip
+                                label={statement}
+                                color="success"
+                                variant="outlined"
+                                sx={{ mr: 1, mb: 1 }}
+                                icon={<CheckCircleIcon />}
+                              />
+                            </Grid>
+                          )
+                        )}
                       </Grid>
 
-                      {/* Score Breakdown */}
+                      {/* Detailed Breakdown */}
                       <Box
                         sx={{ mt: 3, pt: 2, borderTop: "1px dashed #c8e6c9" }}
                       >
@@ -944,93 +786,234 @@ const FarmerCarbonCreditCalculator = () => {
                           variant="subtitle2"
                           sx={{ color: "text.secondary", mb: 1 }}
                         >
-                          SCORE BREAKDOWN
+                          DETAILED BREAKDOWN
                         </Typography>
                         <Grid container spacing={1}>
-                          <Grid item xs={6} sm={3}>
+                          <Grid item xs={12} sm={6} md={4}>
                             <Paper
                               sx={{
                                 p: 1,
-                                textAlign: "center",
                                 backgroundColor: alpha(
                                   theme.palette.success.light,
                                   0.2
                                 ),
                               }}
                             >
-                              <Typography variant="caption" display="block">
-                                Crop
-                              </Typography>
-                              <Typography variant="body2" fontWeight="bold">
-                                {results.details.cropImpact > 0
-                                  ? `+${results.details.cropImpact}`
-                                  : results.details.cropImpact}
-                              </Typography>
+                              <Box display="flex" alignItems="center">
+                                <ParkIcon sx={{ color: "#388e3c", mr: 1 }} />
+                                <Box>
+                                  <Typography variant="caption" display="block">
+                                    Trees Planted
+                                  </Typography>
+                                  <Typography variant="body2" fontWeight="bold">
+                                    {formData.treesPlanted} trees ={" "}
+                                    {results.details.treesCO2} kg CO₂
+                                  </Typography>
+                                </Box>
+                              </Box>
                             </Paper>
                           </Grid>
-                          <Grid item xs={6} sm={3}>
+                          <Grid item xs={12} sm={6} md={4}>
                             <Paper
                               sx={{
                                 p: 1,
-                                textAlign: "center",
                                 backgroundColor: alpha(
                                   theme.palette.success.light,
                                   0.2
                                 ),
                               }}
                             >
-                              <Typography variant="caption" display="block">
-                                Fertilizer
-                              </Typography>
-                              <Typography variant="body2" fontWeight="bold">
-                                {results.details.fertilizerImpact > 0
-                                  ? `+${results.details.fertilizerImpact}`
-                                  : results.details.fertilizerImpact}
-                              </Typography>
+                              <Box display="flex" alignItems="center">
+                                <NatureIcon sx={{ color: "#388e3c", mr: 1 }} />
+                                <Box>
+                                  <Typography variant="caption" display="block">
+                                    Organic Fertilizer
+                                  </Typography>
+                                  <Typography variant="body2" fontWeight="bold">
+                                    {formData.organicFertilizerAcres} acres ={" "}
+                                    {results.details.organicFertCO2} kg CO₂
+                                  </Typography>
+                                </Box>
+                              </Box>
                             </Paper>
                           </Grid>
-                          <Grid item xs={6} sm={3}>
+                          <Grid item xs={12} sm={6} md={4}>
                             <Paper
                               sx={{
                                 p: 1,
-                                textAlign: "center",
                                 backgroundColor: alpha(
                                   theme.palette.success.light,
                                   0.2
                                 ),
                               }}
                             >
-                              <Typography variant="caption" display="block">
-                                Irrigation
-                              </Typography>
-                              <Typography variant="body2" fontWeight="bold">
-                                {results.details.irrigationImpact > 0
-                                  ? `+${results.details.irrigationImpact}`
-                                  : results.details.irrigationImpact}
-                              </Typography>
+                              <Box display="flex" alignItems="center">
+                                <ElectricBoltIcon
+                                  sx={{ color: "#388e3c", mr: 1 }}
+                                />
+                                <Box>
+                                  <Typography variant="caption" display="block">
+                                    Solar Pumps
+                                  </Typography>
+                                  <Typography variant="body2" fontWeight="bold">
+                                    {formData.solarPumps} pumps ={" "}
+                                    {results.details.solarPumpCO2} kg CO₂
+                                  </Typography>
+                                </Box>
+                              </Box>
                             </Paper>
                           </Grid>
-                          <Grid item xs={6} sm={3}>
+                          <Grid item xs={12} sm={6} md={4}>
                             <Paper
                               sx={{
                                 p: 1,
-                                textAlign: "center",
                                 backgroundColor: alpha(
                                   theme.palette.success.light,
                                   0.2
                                 ),
                               }}
                             >
-                              <Typography variant="caption" display="block">
-                                Equipment
-                              </Typography>
-                              <Typography variant="body2" fontWeight="bold">
-                                {results.details.equipmentImpact > 0
-                                  ? `+${results.details.equipmentImpact}`
-                                  : results.details.equipmentImpact}
-                              </Typography>
+                              <Box display="flex" alignItems="center">
+                                <GrassIcon sx={{ color: "#388e3c", mr: 1 }} />
+                                <Box>
+                                  <Typography variant="caption" display="block">
+                                    No-Till Farming
+                                  </Typography>
+                                  <Typography variant="body2" fontWeight="bold">
+                                    {formData.noTillAcres} acres ={" "}
+                                    {results.details.noTillCO2} kg CO₂
+                                  </Typography>
+                                </Box>
+                              </Box>
                             </Paper>
                           </Grid>
+                          <Grid item xs={12} sm={6} md={4}>
+                            <Paper
+                              sx={{
+                                p: 1,
+                                backgroundColor: alpha(
+                                  theme.palette.success.light,
+                                  0.2
+                                ),
+                              }}
+                            >
+                              <Box display="flex" alignItems="center">
+                                <LocalFloristIcon
+                                  sx={{ color: "#388e3c", mr: 1 }}
+                                />
+                                <Box>
+                                  <Typography variant="caption" display="block">
+                                    Cover Cropping
+                                  </Typography>
+                                  <Typography variant="body2" fontWeight="bold">
+                                    {formData.coverCropAcres} acres ={" "}
+                                    {results.details.coverCropCO2} kg CO₂
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </Paper>
+                          </Grid>
+                          {formData.cowsReduced > 0 && (
+                            <Grid item xs={12} sm={6} md={4}>
+                              <Paper
+                                sx={{
+                                  p: 1,
+                                  backgroundColor: alpha(
+                                    theme.palette.success.light,
+                                    0.2
+                                  ),
+                                }}
+                              >
+                                <Box display="flex" alignItems="center">
+                                  <AgricultureIcon
+                                    sx={{ color: "#388e3c", mr: 1 }}
+                                  />
+                                  <Box>
+                                    <Typography
+                                      variant="caption"
+                                      display="block"
+                                    >
+                                      Cows Reduced
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight="bold"
+                                    >
+                                      {formData.cowsReduced} cows ={" "}
+                                      {results.details.cowReductionCO2} kg CO₂
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </Paper>
+                            </Grid>
+                          )}
+                          {formData.rainwaterHarvesting && (
+                            <Grid item xs={12} sm={6} md={4}>
+                              <Paper
+                                sx={{
+                                  p: 1,
+                                  backgroundColor: alpha(
+                                    theme.palette.success.light,
+                                    0.2
+                                  ),
+                                }}
+                              >
+                                <Box display="flex" alignItems="center">
+                                  <WaterDropIcon
+                                    sx={{ color: "#388e3c", mr: 1 }}
+                                  />
+                                  <Box>
+                                    <Typography
+                                      variant="caption"
+                                      display="block"
+                                    >
+                                      Rainwater Harvesting
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight="bold"
+                                    >
+                                      = {results.details.rainwaterCO2} kg CO₂
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </Paper>
+                            </Grid>
+                          )}
+                          {formData.electricPumps > 0 && (
+                            <Grid item xs={12} sm={6} md={4}>
+                              <Paper
+                                sx={{
+                                  p: 1,
+                                  backgroundColor: alpha(
+                                    theme.palette.success.light,
+                                    0.2
+                                  ),
+                                }}
+                              >
+                                <Box display="flex" alignItems="center">
+                                  <EnergySavingsLeafIcon
+                                    sx={{ color: "#388e3c", mr: 1 }}
+                                  />
+                                  <Box>
+                                    <Typography
+                                      variant="caption"
+                                      display="block"
+                                    >
+                                      Electric Pumps
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight="bold"
+                                    >
+                                      {formData.electricPumps} pumps ={" "}
+                                      {results.details.electricPumpCO2} kg CO₂
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </Paper>
+                            </Grid>
+                          )}
                         </Grid>
                       </Box>
                     </Paper>
@@ -1140,7 +1123,11 @@ const FarmerCarbonCreditCalculator = () => {
                             variant="contained"
                             color="info"
                             startIcon={<AutoGraphIcon />}
-                            onClick={() => setShowDashboard(true)}
+                            onClick={() => {
+                              setShowDashboard(true);
+                              // Optionally refresh data when opening dashboard
+                              if (user?.email) fetchUserCarbonData(user.email);
+                            }}
                             sx={{
                               py: 1.5,
                               borderRadius: 2,
@@ -1210,10 +1197,10 @@ const FarmerCarbonCreditCalculator = () => {
                 </Fade>
               )}
 
-              {/* How It Works Section - Using imported component */}
+              {/* How It Works Section */}
               <HowItWorks isMobile={isMobile} theme={theme} />
 
-              {/* FAQ Section - Using imported component */}
+              {/* FAQ Section */}
               <FAQ />
             </CardContent>
           </Card>

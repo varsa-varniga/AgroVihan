@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
   Typography,
@@ -7,10 +7,13 @@ import {
   ListItemIcon,
   ListItemText,
   Paper,
+  Collapse,
 } from "@mui/material";
 import { Info as InfoIcon } from "@mui/icons-material";
 
-const FAQSection = ({ showInfo }) => {
+const FAQSection = () => {
+  const [openIndex, setOpenIndex] = useState(null); // Which answer is open
+
   const faqItems = [
     {
       question: "How are carbon credits calculated?",
@@ -29,6 +32,10 @@ const FAQSection = ({ showInfo }) => {
     },
   ];
 
+  const handleToggle = (index) => {
+    setOpenIndex(openIndex === index ? null : index);
+  };
+
   return (
     <Box sx={{ mt: 6 }}>
       <Typography
@@ -44,12 +51,13 @@ const FAQSection = ({ showInfo }) => {
       >
         <InfoIcon fontSize="large" /> Frequently Asked Questions
       </Typography>
+
       <List>
         {faqItems.map((item, index) => (
           <Paper key={index} elevation={0} sx={{ mb: 2, borderRadius: 2 }}>
             <ListItem
               button
-              onClick={() => showInfo(item.answer)}
+              onClick={() => handleToggle(index)}
               sx={{
                 backgroundColor: "#f5f5f5",
                 borderRadius: 2,
@@ -66,6 +74,14 @@ const FAQSection = ({ showInfo }) => {
                 primaryTypographyProps={{ fontWeight: "medium" }}
               />
             </ListItem>
+
+            <Collapse in={openIndex === index} timeout="auto" unmountOnExit>
+              <Box sx={{ p: 2, backgroundColor: "#fafafa", borderRadius: 2 }}>
+                <Typography variant="body1" color="text.secondary">
+                  {item.answer}
+                </Typography>
+              </Box>
+            </Collapse>
           </Paper>
         ))}
       </List>
