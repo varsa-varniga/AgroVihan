@@ -72,6 +72,12 @@ import { onAuthStateChanged } from "firebase/auth";
 
 import CarbonCreditDashboard from "./carboncreditdashboard";
 
+import {
+  connectWallet,
+  saveCarbonCreditsToBlockchain,
+  getBlockExplorerUrl,
+} from "../../utils/blockchainUtils";
+
 const FarmerCarbonCreditCalculator = () => {
   const [user, setUser] = useState(null);
 
@@ -102,6 +108,23 @@ const FarmerCarbonCreditCalculator = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [showDashboard, setShowDashboard] = useState(false);
+
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [walletAddress, setWalletAddress] = useState("");
+  const [txHash, setTxHash] = useState("");
+  const [error, setError] = useState(null);
+
+  const handleConnectWallet = async () => {
+    try {
+      setError(null);
+      const address = await connectWallet();
+      setWalletAddress(address);
+      setWalletConnected(true);
+    } catch (err) {
+      console.error("Error connecting wallet:", err);
+      setError(err.message || "Failed to connect wallet");
+    }
+  };
 
   // Carbon credit calculation constants
   const CARBON_CREDIT_RATE = 1000; // 1 credit = 1000 kg CO2
@@ -239,17 +262,59 @@ const FarmerCarbonCreditCalculator = () => {
     }, 1500);
   };
 
-  const saveToBlockchain = () => {
-    setLoading(true);
-    // Simulate blockchain transaction
-    setTimeout(() => {
+  const saveToBlockchain = async () => {
+    if (!walletConnected) {
+      try {
+        await handleConnectWallet();
+      } catch (err) {
+        return;
+      }
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Prepare practice details for blockchain storage
+      const practiceDetails = {
+        treesPlanted: formData.treesPlanted,
+        organicFertilizer: formData.organicFertilizerAcres,
+        solarPumps: formData.solarPumps,
+        noTillAcres: formData.noTillAcres,
+        coverCropAcres: formData.coverCropAcres,
+        cowsReduced: formData.cowsReduced,
+        rainwaterHarvesting: formData.rainwaterHarvesting ? 1 : 0,
+        electricPumps: formData.electricPumps,
+      };
+
+      // Save to blockchain
+      const result = await saveCarbonCreditsToBlockchain(
+        username || "Anonymous",
+        results.credits,
+        results.totalCO2,
+        practiceDetails
+      );
+
+      // Update UI with transaction hash
+      setTxHash(result.txHash);
       setSavedToBlockchain(true);
+
+      // Show success message
+      console.log("Successfully saved to blockchain!", result);
+    } catch (err) {
+      console.error("Error saving to blockchain:", err);
+      setError(err.message || "Failed to save to blockchain");
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   const viewOnExplorer = () => {
-    alert("This would open the blockchain explorer in a real implementation");
+    if (txHash) {
+      window.open(getBlockExplorerUrl(txHash), "_blank");
+    } else {
+      alert("No transaction has been made yet.");
+    }
   };
 
   const shareResults = () => {
@@ -1188,8 +1253,24 @@ const FarmerCarbonCreditCalculator = () => {
                               fontFamily: "monospace",
                             }}
                           >
-                            Transaction ID: 0x7d3...4f2a
+                            Transaction ID:{" "}
+                            {txHash
+                              ? txHash.substring(0, 6) +
+                                "..." +
+                                txHash.substring(txHash.length - 4)
+                              : "0x7d3...4f2a"}
                           </Typography>
+                          {error && (
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: "error.main",
+                                mt: 1,
+                              }}
+                            >
+                              Error: {error}
+                            </Typography>
+                          )}
                         </Box>
                       </Zoom>
                     )}
