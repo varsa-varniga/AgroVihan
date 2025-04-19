@@ -13,35 +13,37 @@ const FloatingChatbot = () => {
 
   return (
     <>
-      {/* Floating Chat Button */}
-      <Box
-        sx={{
-          position: "fixed",
-          bottom: 24,
-          right: 24,
-          zIndex: 1300,
-        }}
-      >
-        <Fab
-          color="primary"
-          aria-label="chat"
-          onClick={toggleChat}
+      {/* Show only when chatbot is closed */}
+      {!isOpen && (
+        <Box
           sx={{
-            width: 64,
-            height: 64,
-            background: "linear-gradient(135deg, #2196f3 0%, #1976d2 100%)",
-            boxShadow: "0 8px 16px rgba(0,0,0,0.24)",
-            transition: "all 0.3s ease",
-            "&:hover": {
-              transform: "scale(1.05)",
-              background: "linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)",
-              boxShadow: "0 12px 20px rgba(0,0,0,0.3)",
-            },
+            position: "fixed",
+            bottom: 39,
+            right: 24,
+            zIndex: 1300,
           }}
         >
-          <ChatIcon sx={{ fontSize: 28 }} />
-        </Fab>
-      </Box>
+          <Fab
+            color="primary"
+            aria-label="chat"
+            onClick={toggleChat}
+            sx={{
+              width: 64,
+              height: 64,
+              background: "linear-gradient(135deg, #2196f3 0%, #1976d2 100%)",
+              boxShadow: "0 8px 16px rgba(0,0,0,0.24)",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "scale(1.05)",
+                background: "linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)",
+                boxShadow: "0 12px 20px rgba(0,0,0,0.3)",
+              },
+            }}
+          >
+            <ChatIcon sx={{ fontSize: 28 }} />
+          </Fab>
+        </Box>
+      )}
 
       {/* Chat Drawer */}
       <Drawer
@@ -52,8 +54,8 @@ const FloatingChatbot = () => {
           sx: {
             width: { xs: "100%", sm: 420 },
             maxWidth: "100%",
-            height: "94vh",
-            maxHeight: "94vh",
+            height: "85vh",
+            maxHeight: "85vh",
             borderRadius: { xs: "20px 20px 0 0", sm: "16px 0 0 16px" },
             bottom: { xs: 0, sm: "3vh" },
             top: { xs: "6vh", sm: "3vh" },
