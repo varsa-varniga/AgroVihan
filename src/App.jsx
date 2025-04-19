@@ -3,21 +3,22 @@ import { useState, useEffect } from "react";
 
 // Auth pages
 import GoogleLogin from "./Authentication/GoogleLogin.jsx";
-import Login from './Authentication/Login.jsx';
-import './App.css'
-
+import Login from "./Authentication/Login.jsx";
+import "./App.css";
 
 // Public pages
-import AboutUs from './pages/AboutUs.jsx';
-import HeroPage from './pages/Heropage.jsx';
-import Welcome from './pages/Welcome.jsx';
+import AboutUs from "./pages/AboutUs.jsx";
+import HeroPage from "./pages/Heropage.jsx";
+import Welcome from "./pages/Welcome.jsx";
 
 // Dashboard (Protected)
-import Sidebar from './pages/Sidebar.jsx';
+import Sidebar from "./pages/Sidebar.jsx";
 
 // Common layout
-import Layout from './Components/Layout.jsx';
+import Layout from "./Components/Layout.jsx";
 
+// Floating chatbot
+import FloatingChatbot from "./FloatingChatbot.jsx";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -41,14 +42,22 @@ function App() {
 
   return (
     <BrowserRouter>
+      {/* Floating Chatbot is available on all pages */}
+      <FloatingChatbot />
+
       <Routes>
         {/* Layout for public pages (with Navbar/Footer) */}
-        <Route element={<Layout isLoggedIn={isLoggedIn} onLogout={handleLogout} />}>
+        <Route
+          element={<Layout isLoggedIn={isLoggedIn} onLogout={handleLogout} />}
+        >
           <Route path="/" element={<HeroPage />} />
           <Route path="/features" element={<Welcome />} />
           <Route path="/about" element={<AboutUs />} />
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
-          <Route path="/google-login" element={<GoogleLogin onLogin={handleLogin} />} />
+          <Route
+            path="/google-login"
+            element={<GoogleLogin onLogin={handleLogin} />}
+          />
         </Route>
 
         {/* Protected route */}
@@ -56,7 +65,12 @@ function App() {
           path="/dashboard/*"
           element={
             isLoggedIn ? (
-              <Sidebar onLogout={handleLogout} />
+              <Sidebar
+                onLogout={handleLogout}
+                userEmail={
+                  localStorage.getItem("userEmail") || "user@example.com"
+                }
+              />
             ) : (
               <Navigate to="/login" />
             )

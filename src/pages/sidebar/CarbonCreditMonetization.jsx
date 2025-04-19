@@ -56,6 +56,7 @@ import { alpha } from "@mui/material/styles";
 import HowItWorks from "../../Components/carboncreditworks";
 import FAQ from "../../Components/carboncreditfaq";
 import { useState, useEffect } from "react";
+import DashboardHome from "./DashboardHome";
 
 import { db } from "../../carboncreditfirebase/firebaseconfig.my";
 import {
@@ -1319,6 +1320,7 @@ const FarmerCarbonCreditCalculator = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      <DashboardHome />
     </Box>
   );
 };
