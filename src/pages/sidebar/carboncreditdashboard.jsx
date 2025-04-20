@@ -50,7 +50,7 @@ import {
 import { motion } from "framer-motion";
 import { alpha } from "@mui/material/styles";
 
-import { db, auth } from "../../carboncreditfirebase/firebaseconfig.my";
+import { db, auth } from "../../firebaseConfig";
 import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
 
 const Dashboard = ({ onClose }) => {

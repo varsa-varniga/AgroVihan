@@ -13,6 +13,7 @@ import Welcome from "./pages/Welcome.jsx";
 
 // Dashboard (Protected)
 import Sidebar from "./pages/Sidebar.jsx";
+import DashboardHome from "./pages/sidebar/DashboardHome.jsx";
 
 // Common layout
 import Layout from "./Components/Layout.jsx";
@@ -22,22 +23,32 @@ import FloatingChatbot from "./FloatingChatbot.jsx";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
     const loggedInStatus = localStorage.getItem("isLoggedIn");
+    const storedRole = localStorage.getItem("userRole");
     if (loggedInStatus === "true") {
       setIsLoggedIn(true);
+      setUserRole(storedRole);
     }
   }, []);
 
-  const handleLogin = () => {
+  const handleLogin = (email, role) => {
     setIsLoggedIn(true);
+    setUserRole(role);
     localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("userRole", role);
+    if (email) {
+      localStorage.setItem("userEmail", email);
+    }
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setUserRole(null);
     localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("userRole");
   };
 
   return (
@@ -60,12 +71,29 @@ function App() {
           />
         </Route>
 
-        {/* Protected route */}
+        {/* Protected routes for farmers */}
         <Route
           path="/dashboard/*"
           element={
-            isLoggedIn ? (
+            isLoggedIn && userRole === "farmer" ? (
               <Sidebar
+                onLogout={handleLogout}
+                userEmail={
+                  localStorage.getItem("userEmail") || "user@example.com"
+                }
+              />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+
+        {/* Protected route for regular users */}
+        <Route
+          path="/dashboard/home"
+          element={
+            isLoggedIn && userRole === "user" ? (
+              <DashboardHome
                 onLogout={handleLogout}
                 userEmail={
                   localStorage.getItem("userEmail") || "user@example.com"
