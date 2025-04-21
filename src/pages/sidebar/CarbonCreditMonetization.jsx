@@ -57,7 +57,7 @@ import HowItWorks from "../../Components/carboncreditworks";
 import FAQ from "../../Components/carboncreditfaq";
 import { useState, useEffect } from "react";
 
-import { db } from "../../carboncreditfirebase/firebaseconfig.my";
+import { db } from "../../firebaseConfig";
 import {
   collection,
   addDoc,
@@ -67,7 +67,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 
-import { auth } from "../../carboncreditfirebase/firebaseconfig.my";
+import { auth } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 
 import CarbonCreditDashboard from "./carboncreditdashboard";

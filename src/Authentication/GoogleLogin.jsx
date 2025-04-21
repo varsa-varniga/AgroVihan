@@ -5,13 +5,12 @@ import { Button } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
 import { useNavigate } from "react-router-dom";
 
-
-const GoogleLogin = ({ onLogin }) => {
+const GoogleLogin = ({ onLogin, userRole }) => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleGoogleLogin = async () => {
-    if (loading) return; // ✅ Prevent multiple clicks
+    if (loading) return;
     setLoading(true);
 
     try {
@@ -19,8 +18,16 @@ const GoogleLogin = ({ onLogin }) => {
       const user = result.user;
       console.log("User Info:", user);
 
-      if (user && onLogin) onLogin(user.email);
-      navigate("/dashboard");
+      if (user && onLogin) {
+        onLogin(user.email, userRole);
+      }
+
+      // Redirect based on role
+      if (userRole === "farmer") {
+        navigate("/dashboard");
+      } else {
+        navigate("/dashboard/home");
+      }
     } catch (error) {
       console.error("Login Failed:", error);
       alert("Login failed. Check console for details.");

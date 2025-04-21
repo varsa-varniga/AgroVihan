@@ -25,6 +25,8 @@ import axios from 'axios';
 // Import Firebase
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { useNavigate } from "react-router-dom";
+
 
 // Theme colors
 const primaryGreen = '#4CAF50';
@@ -94,6 +96,14 @@ const ClimateAIForecast = () => {
     location: "Loading..."
   });
   const [userAvatar, setUserAvatar] = useState(null);
+
+
+  const navigate = useNavigate();  // hook to navigate to different routes
+
+  const handleNavigate = () => {
+    navigate("/suggestions");  // navigate to the Suggestions page
+  };
+
 
   const API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
   const lat = 11.0168;
@@ -283,6 +293,8 @@ const ClimateAIForecast = () => {
     );
   }
 
+  const rainVolume = weather.rain?.["1h"] || 0;
+
   const overviewData = [
     {
       title: "Wind status",
@@ -308,10 +320,10 @@ const ClimateAIForecast = () => {
       icon: "💧"
     },
     {
-      title: "Visibility",
-      value: `${(weather.visibility / 1000).toFixed(1)} km`,
-      subtitle: weather.visibility < 5000 ? "Reduced visibility" : "Good visibility",
-      icon: "👁️"
+      title: "Rain",
+      value: `${rainVolume} mm`,
+      subtitle: rainVolume > 0 ? "It's raining" : "No rain currently",
+      icon: "🌧️"
     },
     {
       title: "Feels like",
@@ -320,7 +332,7 @@ const ClimateAIForecast = () => {
       icon: "🌡️"
     },
   ];
-
+  
   return (
     <Container
       maxWidth="xl"
@@ -498,6 +510,7 @@ const ClimateAIForecast = () => {
                 boxShadow: "none",
               },
             }}
+            onClick={handleNavigate}  // onClick event to navigate
           >
             Get Smart Advice
           </Button>

@@ -35,8 +35,8 @@ import {
   Nature as NatureIcon,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db, auth } from "../../carboncreditfirebase/firebaseconfig.my";
+import { collection, getDocs } from "firebase/firestore";
+import { db, auth } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 
 const DashboardHome = () => {
@@ -55,68 +55,63 @@ const DashboardHome = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const DOLLAR_PER_CREDIT = 4.75;
 
+  // Define fetchUserData outside useEffect so it can be referenced elsewhere
+  const fetchUserData = async () => {
+    setLoading(true);
+    try {
+      const userCollection = collection(db, "carbonCalculations");
+      // Always get all user data regardless of who is logged in
+      const querySnapshot = await getDocs(userCollection);
+
+      // Process data to get unique users with their total credits
+      const userMap = new Map();
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const email = data.email;
+        const username = data.username || "Anonymous";
+        const totalCredits = data.totalCredits || 0;
+        const lastCalculation = data.timestamp?.toDate() || new Date();
+
+        if (userMap.has(email)) {
+          const user = userMap.get(email);
+          if (totalCredits > user.totalCredits) {
+            user.totalCredits = totalCredits;
+          }
+          if (lastCalculation > user.lastCalculation) {
+            user.lastCalculation = lastCalculation;
+          }
+        } else {
+          userMap.set(email, {
+            email,
+            username,
+            totalCredits,
+            lastCalculation,
+            carbonScore: data.carbonScore || 0,
+          });
+        }
+      });
+
+      // Convert map to array
+      const usersArray = Array.from(userMap.values());
+      setUsers(usersArray);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        fetchUserData();
-      } else {
-        setUsers([]);
-      }
+      // Always fetch all user data, regardless of auth state
+      fetchUserData();
     });
 
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      setLoading(true);
-      try {
-        const userCollection = collection(db, "carbonCalculations");
-        const q = query(
-          userCollection,
-          where("email", "==", auth.currentUser.email)
-        );
-        const querySnapshot = await getDocs(userCollection);
-
-        // Process data to get unique users with their total credits
-        const userMap = new Map();
-
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          const email = data.email;
-          const username = data.username || "Anonymous";
-          const totalCredits = data.totalCredits || 0;
-          const lastCalculation = data.timestamp?.toDate() || new Date();
-
-          if (userMap.has(email)) {
-            const user = userMap.get(email);
-            if (totalCredits > user.totalCredits) {
-              user.totalCredits = totalCredits;
-            }
-            if (lastCalculation > user.lastCalculation) {
-              user.lastCalculation = lastCalculation;
-            }
-          } else {
-            userMap.set(email, {
-              email,
-              username,
-              totalCredits,
-              lastCalculation,
-              carbonScore: data.carbonScore || 0,
-            });
-          }
-        });
-
-        // Convert map to array
-        const usersArray = Array.from(userMap.values());
-        setUsers(usersArray);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUserData();
   }, []);
 
