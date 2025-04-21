@@ -7,16 +7,18 @@ import Login from "./Authentication/Login.jsx";
 import "./App.css";
 
 // Public pages
-import AboutUs from "./pages/AboutUs.jsx";
-import HeroPage from "./pages/Heropage.jsx";
-import Welcome from "./pages/Welcome.jsx";
+import AboutUs from './pages/AboutUs.jsx';
+import HeroPage from './pages/Heropage.jsx';
+import Welcome from './pages/Welcome.jsx';
+import TaskManagement from './pages/TaskManagement.jsx';
 
 // Dashboard (Protected)
 import Sidebar from "./pages/Sidebar.jsx";
 import DashboardHome from "./pages/sidebar/DashboardHome.jsx";
 
 // Common layout
-import Layout from "./Components/Layout.jsx";
+import Layout from './Components/Layout.jsx';
+import Suggestions from './pages/Suggestions.jsx';
 
 // Floating chatbot
 import FloatingChatbot from "./FloatingChatbot.jsx";
@@ -49,6 +51,7 @@ function App() {
     setUserRole(null);
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("userRole");
+    localStorage.removeItem("userEmail");
   };
 
   return (
@@ -65,13 +68,25 @@ function App() {
           <Route path="/features" element={<Welcome />} />
           <Route path="/about" element={<AboutUs />} />
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
+          <Route path="/google-login" element={<GoogleLogin onLogin={handleLogin} />} />
+
+          {/* Protected Suggestions + TaskManagement for farmers */}
           <Route
-            path="/google-login"
-            element={<GoogleLogin onLogin={handleLogin} />}
+            path="/suggestions"
+            element={
+              isLoggedIn && userRole === "farmer" ? (
+                <>
+                  <Suggestions />
+                  <TaskManagement />
+                </>
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
           />
         </Route>
 
-        {/* Protected routes for farmers */}
+        {/* Protected route for farmers */}
         <Route
           path="/dashboard/*"
           element={
