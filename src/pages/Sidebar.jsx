@@ -43,6 +43,7 @@ import RegionalResourceHubs from "./sidebar/RegionalResourceHubs";
 import CarbonCreditMonetization from "./sidebar/CarbonCreditMonetization";
 
 import MapPage from "../regionalhub/MapPage";
+import Details from "../regionalhub/Details";
 
 // Theme colors
 const primaryGreen = '#2e7d32';
@@ -395,7 +396,9 @@ function Sidebar({ onLogout, userEmail }) {
             <Route path="plant-doctor" element={<PlantDoctor />} />
             <Route path="agri-bot" element={<MultilingualAgriBot />} />
             <Route path="resource-hubs" element={<MapPage />} />
+            <Route path="resource-hubs/details/:id" element={<Details />} />
             <Route path="carbon-credit" element={<CarbonCreditMonetization />} />
+            
           </Routes>
         </Box>
       </Box>
