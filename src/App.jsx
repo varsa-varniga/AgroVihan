@@ -10,6 +10,12 @@ import "./App.css";
 import AboutUs from "./pages/AboutUs.jsx";
 import HeroPage from "./pages/Heropage.jsx";
 import Welcome from "./pages/Welcome.jsx";
+import Climate from "./pages/Climate.jsx";
+import Disease from "./pages/Disease.jsx";
+import Fertilizer from "./pages/Fertilizer.jsx";
+import Carbon from "./pages/Carbon_credit.jsx";
+import Chat from "./pages/Chat.jsx";
+import Hubs from "./pages/Hubs.jsx";
 
 // Dashboard (Protected)
 import Sidebar from "./pages/Sidebar.jsx";
@@ -62,7 +68,18 @@ function App() {
           element={<Layout isLoggedIn={isLoggedIn} onLogout={handleLogout} />}
         >
           <Route path="/" element={<HeroPage />} />
-          <Route path="/features" element={<Welcome />} />
+          <Route path="/features" element={
+            <>
+            <Welcome/>
+            <Climate/>
+            <Disease/>
+            <Fertilizer/>
+            <Carbon/>
+            <Chat/>
+            <Hubs/>
+            </>
+          }/>
+
           <Route path="/about" element={<AboutUs />} />
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route
