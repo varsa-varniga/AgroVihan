@@ -309,6 +309,58 @@ const FarmerCarbonCreditCalculator = () => {
     }
   };
 
+  // New function to update blockchain status in Firebase
+  // In the updateBlockchainStatus function (around line 343)
+
+  const updateBlockchainStatus = async (
+    email,
+    username,
+    txHash,
+    carbonCredits,
+    co2Saved
+  ) => {
+    try {
+      console.log("🔗 Updating blockchain status for:", email);
+
+      const userCollection = collection(db, "carbonCalculations");
+
+      // Step 1: Find the existing document for the user
+      const q = query(userCollection, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        // Get the ID of the first document (assuming only one document per user)
+        const docId = querySnapshot.docs[0].id;
+        const docRef = doc(db, "carbonCalculations", docId);
+
+        // Step 2: Update the existing document
+        await updateDoc(docRef, {
+          blockchainVerified: true,
+          txHash: txHash,
+          blockchainTimestamp: Timestamp.now(),
+          walletAddress: walletAddress,
+        });
+      }
+
+      // Add new document with blockchain details (using a different variable name)
+      const newDocRef = await addDoc(userCollection, {
+        email,
+        username,
+        carbonCredits,
+        co2Saved,
+        blockchainVerified: true,
+        txHash: txHash,
+        blockchainTimestamp: Timestamp.now(),
+        walletAddress: walletAddress,
+      });
+
+      console.log("✅ Blockchain data saved to Firestore!");
+      console.log("📄 Document ID:", newDocRef.id);
+    } catch (error) {
+      console.error("❌ Error saving blockchain data:", error);
+    }
+  };
+
   const viewOnExplorer = () => {
     if (txHash) {
       window.open(getBlockExplorerUrl(txHash), "_blank");
