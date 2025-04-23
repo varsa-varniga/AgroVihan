@@ -33,15 +33,18 @@ import {
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon,
   Nature as NatureIcon,
-  Link as LinkIcon,
-  Visibility as VisibilityIcon,
   Verified as VerifiedIcon,
+  Link as LinkIcon,
+  ErrorOutline as ErrorOutlineIcon,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { collection, getDocs } from "firebase/firestore";
 import { db, auth } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
-import { getBlockExplorerUrl } from "../../utils/blockchainUtils";
+import {
+  getFarmerRecords,
+  getBlockExplorerUrl,
+} from "../../utils/blockchainUtils";
 
 const DashboardHome = () => {
   const [users, setUsers] = useState([]);
@@ -54,12 +57,13 @@ const DashboardHome = () => {
     key: "totalCredits",
     direction: "desc",
   });
+  const [blockchainData, setBlockchainData] = useState({});
+  const [blockchainLoading, setBlockchainLoading] = useState(false);
+  const [blockchainError, setBlockchainError] = useState(null);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const DOLLAR_PER_CREDIT = 4.75;
-
-  const purchaseButtonRef = React.useRef(null);
 
   // Define fetchUserData outside useEffect so it can be referenced elsewhere
   const fetchUserData = async () => {
@@ -78,16 +82,10 @@ const DashboardHome = () => {
         const username = data.username || "Anonymous";
         const totalCredits = data.totalCredits || 0;
         const lastCalculation = data.timestamp?.toDate() || new Date();
-
-        // Add blockchain verification data
-        // Inside the fetchUserData function, modify:
-        const blockchainVerified = Boolean(data.blockchainVerified) || false;
-        const txHash = data.txHash || "";
-        // Correctly handle blockchainTimestamp
-        const blockchainTimestamp = data.blockchainTimestamp
-          ? data.blockchainTimestamp.toDate()
-          : null;
-        const walletAddress = data.walletAddress || "";
+        const blockchainVerified = data.blockchainVerified || false;
+        const txHash = data.txHash || null;
+        const walletAddress = data.walletAddress || null;
+        const blockchainTimestamp = data.blockchainTimestamp?.toDate() || null;
 
         if (userMap.has(email)) {
           const user = userMap.get(email);
@@ -97,13 +95,12 @@ const DashboardHome = () => {
           if (lastCalculation > user.lastCalculation) {
             user.lastCalculation = lastCalculation;
           }
-
-          // Update blockchain status if present
-          if (blockchainVerified) {
-            user.blockchainVerified = true;
+          // Update blockchain verification if available
+          if (blockchainVerified && !user.blockchainVerified) {
+            user.blockchainVerified = blockchainVerified;
             user.txHash = txHash;
-            user.blockchainTimestamp = blockchainTimestamp;
             user.walletAddress = walletAddress;
+            user.blockchainTimestamp = blockchainTimestamp;
           }
         } else {
           userMap.set(email, {
@@ -112,10 +109,10 @@ const DashboardHome = () => {
             totalCredits,
             lastCalculation,
             carbonScore: data.carbonScore || 0,
-            blockchainVerified,
-            txHash,
-            blockchainTimestamp,
             walletAddress,
+            txHash,
+            blockchainVerified,
+            blockchainTimestamp,
           });
         }
       });
@@ -139,9 +136,61 @@ const DashboardHome = () => {
     return () => unsubscribe();
   }, []);
 
+  // Function to fetch blockchain data for a user
+  const fetchBlockchainData = async (user) => {
+    if (!user.walletAddress) {
+      console.warn(
+        `No wallet address found for user ${user.email}. Skipping blockchain data fetch.`
+      );
+      return;
+    }
+
+    setBlockchainLoading(true);
+    setBlockchainError(null);
+    try {
+      // Fetch farmer records from the blockchain
+      const records = await getFarmerRecords(user.walletAddress);
+      console.log(`Blockchain records fetched for ${user.email}:`, records);
+
+      // If records exist, store them in the state
+      if (records && records.length > 0) {
+        setBlockchainData((prevData) => ({
+          ...prevData,
+          [user.email]: records,
+        }));
+      } else {
+        console.log(`No blockchain records found for user ${user.email}.`);
+        setBlockchainData((prevData) => ({ ...prevData, [user.email]: [] }));
+      }
+    } catch (error) {
+      console.error("Error fetching blockchain data:", error);
+      setBlockchainError(error.message || "Failed to fetch blockchain data.");
+    } finally {
+      setBlockchainLoading(false);
+    }
+  };
+
+  // New useEffect to handle blockchain data fetching for all verified users
   useEffect(() => {
-    fetchUserData();
-  }, []);
+    // Only run this if we have users loaded
+    if (users.length > 0) {
+      // Find all users that need blockchain data fetched
+      users.forEach((user) => {
+        if (
+          user.blockchainVerified &&
+          user.walletAddress &&
+          !blockchainData[user.email]
+        ) {
+          console.log(`Fetching blockchain data for ${user.email}`);
+          fetchBlockchainData(user);
+        } else {
+          console.log(
+            `Skipping blockchain data fetch for ${user.email}. Conditions not met.`
+          );
+        }
+      });
+    }
+  }, [users, blockchainData]);
 
   const handlePurchaseClick = (user) => {
     setSelectedUser(user);
@@ -164,7 +213,7 @@ const DashboardHome = () => {
   };
 
   const formatDate = (date) => {
-    if (!date) return "N/A"; // Handle null or undefined dates
+    if (!date) return "N/A";
     return new Date(date).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -195,6 +244,191 @@ const DashboardHome = () => {
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.username?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // New function to render blockchain verification status
+  const renderBlockchainStatus = (user) => {
+    if (user.blockchainVerified && user.txHash) {
+      return (
+        <Box
+          sx={{
+            p: 2,
+            bgcolor: "#f0f7f0",
+            borderTop: "1px solid #c8e6c9",
+          }}
+        >
+          <Typography
+            variant="subtitle2"
+            color="text.secondary"
+            gutterBottom
+            sx={{ display: "flex", alignItems: "center" }}
+          >
+            <VerifiedIcon
+              sx={{
+                color: theme.palette.success.main,
+                mr: 0.5,
+              }}
+            />
+            Blockchain Verified
+            <Chip
+              size="small"
+              label="Verified"
+              color="success"
+              sx={{ ml: 1, height: 20, fontSize: "0.7rem" }}
+            />
+          </Typography>
+
+          <Typography variant="body2" sx={{ mb: 0.5 }}>
+            <b>Transaction:</b>{" "}
+            <a
+              href={getBlockExplorerUrl(user.txHash)}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                textDecoration: "none",
+                color: theme.palette.primary.main,
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+            >
+              {user.txHash.substring(0, 6)}...
+              {user.txHash.substring(user.txHash.length - 4)}
+              <LinkIcon sx={{ fontSize: 14, ml: 0.5 }} />
+            </a>
+          </Typography>
+
+          {user.blockchainTimestamp && (
+            <Typography variant="body2">
+              <b>Verified on:</b> {formatDate(user.blockchainTimestamp)}
+            </Typography>
+          )}
+        </Box>
+      );
+    } else {
+      return (
+        <Box
+          sx={{
+            p: 2,
+            bgcolor: "#f5f5f5",
+            borderTop: "1px solid #e0e0e0",
+          }}
+        >
+          <Typography
+            variant="subtitle2"
+            color="text.secondary"
+            gutterBottom
+            sx={{ display: "flex", alignItems: "center" }}
+          >
+            <ErrorOutlineIcon
+              sx={{
+                color: theme.palette.warning.main,
+                mr: 0.5,
+              }}
+            />
+            Blockchain Status
+            <Chip
+              size="small"
+              label="Pending"
+              color="warning"
+              sx={{ ml: 1, height: 20, fontSize: "0.7rem" }}
+            />
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Not yet verified in blockchain
+          </Typography>
+        </Box>
+      );
+    }
+  };
+
+  // New function to render certificate data
+  const renderCertificateData = (user) => {
+    if (user.blockchainVerified && user.txHash) {
+      // Get farming practices from blockchain data if available
+      let farmingPractices = "Sustainable Farming Practices";
+
+      // If we have blockchain data for this user, use it to extract practices
+      if (blockchainData[user.email]?.length > 0) {
+        // This is a placeholder - in a real app, you'd extract the actual practices from blockchain data
+        farmingPractices = "Data from blockchain";
+      }
+
+      return (
+        <Box
+          sx={{
+            p: 2,
+            bgcolor: "#fff",
+            borderTop: "1px solid #e0e0e0",
+            borderRadius: "0 0 8px 8px",
+          }}
+        >
+          <Typography
+            variant="subtitle2"
+            fontWeight="bold"
+            gutterBottom
+            sx={{ display: "flex", alignItems: "center" }}
+          >
+            <VerifiedIcon
+              sx={{
+                color: theme.palette.success.main,
+                mr: 0.5,
+              }}
+            />
+            Digital Carbon Credit Certificate
+          </Typography>
+
+          <Paper
+            elevation={0}
+            sx={{
+              p: 1.5,
+              bgcolor: "#f9fbf9",
+              border: "1px solid #e6f0e6",
+              borderRadius: 1,
+              fontSize: "0.875rem",
+            }}
+          >
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              🌱 <b>Farmer:</b> {user.username}
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              📦 <b>Practices:</b>{" "}
+              {user.rainwaterHarvesting
+                ? "Rainwater Harvesting"
+                : "Sustainable Farming"}
+              {user.solarPumps > 0 ? ", Solar Pumps" : ""}
+              {user.organicFertilizerAcres > 0 ? ", Organic Fertilizer" : ""}
+              {user.noTillAcres > 0 ? ", No-Till Farming" : ""}
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              🌍 <b>Carbon Credits:</b> {user.totalCredits}
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              🕒 <b>Timestamp:</b>{" "}
+              {formatDate(user.blockchainTimestamp || user.lastCalculation)}
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 0.5 }}>
+              ✅ <b>Status:</b> Success (Confirmed)
+            </Typography>
+            <Typography variant="body2">
+              🔗 <b>View:</b>{" "}
+              <a
+                href={getBlockExplorerUrl(user.txHash)}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  textDecoration: "none",
+                  color: theme.palette.primary.main,
+                  fontWeight: "medium",
+                }}
+              >
+                Blockchain Explorer
+              </a>
+            </Typography>
+          </Paper>
+        </Box>
+      );
+    }
+    return null;
+  };
 
   return (
     <Box
@@ -342,6 +576,30 @@ const DashboardHome = () => {
               >
                 Date
               </Button>
+
+              <Button
+                size="small"
+                onClick={() => handleSort("blockchainVerified")}
+                startIcon={
+                  sortConfig.key === "blockchainVerified" ? (
+                    sortConfig.direction === "asc" ? (
+                      <ArrowUpwardIcon />
+                    ) : (
+                      <ArrowDownwardIcon />
+                    )
+                  ) : null
+                }
+                sx={{
+                  color:
+                    sortConfig.key === "blockchainVerified"
+                      ? "primary.main"
+                      : "text.secondary",
+                  fontWeight:
+                    sortConfig.key === "blockchainVerified" ? "bold" : "normal",
+                }}
+              >
+                Verified
+              </Button>
             </Paper>
           </Box>
 
@@ -393,26 +651,29 @@ const DashboardHome = () => {
                         borderRadius: 2,
                         height: "100%",
                         overflow: "hidden",
-                        border: user.blockchainVerified
-                          ? "1px solid #4caf50"
-                          : "1px solid #e0e0e0",
+                        border: "1px solid #e0e0e0",
                       }}
                     >
                       <Box
                         sx={{
-                          bgcolor: "#e8f5e9",
+                          bgcolor: user.blockchainVerified
+                            ? "#e8f5e9"
+                            : "#f5f5f5",
                           p: 2,
-                          borderBottom: "1px solid #c8e6c9",
+                          borderBottom: user.blockchainVerified
+                            ? "1px solid #c8e6c9"
+                            : "1px solid #e0e0e0",
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
-                          flexWrap: "wrap",
                         }}
                       >
                         <Box sx={{ display: "flex", alignItems: "center" }}>
                           <Avatar
                             sx={{
-                              bgcolor: theme.palette.success.main,
+                              bgcolor: user.blockchainVerified
+                                ? theme.palette.success.main
+                                : theme.palette.grey[500],
                               color: "white",
                             }}
                           >
@@ -436,39 +697,24 @@ const DashboardHome = () => {
                           </Box>
                         </Box>
 
-                        <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
-                          <Chip
-                            size="small"
-                            label={
-                              user.carbonScore > 80
-                                ? "Excellent"
-                                : user.carbonScore > 60
-                                ? "Good"
-                                : "Basic"
-                            }
-                            color={
-                              user.carbonScore > 80
-                                ? "success"
-                                : user.carbonScore > 60
-                                ? "warning"
-                                : "default"
-                            }
-                            sx={{ fontWeight: "medium" }}
-                          />
-                          {console.log(
-                            "User blockchain verified:",
-                            user.blockchainVerified
-                          )}
-                          {user.blockchainVerified && (
-                            <Chip
-                              size="small"
-                              icon={<VerifiedIcon />}
-                              label="Verified"
-                              color="primary"
-                              sx={{ fontWeight: "medium" }}
-                            />
-                          )}
-                        </Box>
+                        <Chip
+                          size="small"
+                          label={
+                            user.carbonScore > 80
+                              ? "Excellent"
+                              : user.carbonScore > 60
+                              ? "Good"
+                              : "Basic"
+                          }
+                          color={
+                            user.carbonScore > 80
+                              ? "success"
+                              : user.carbonScore > 60
+                              ? "warning"
+                              : "default"
+                          }
+                          sx={{ fontWeight: "medium" }}
+                        />
                       </Box>
 
                       <CardContent sx={{ p: 2 }}>
@@ -487,7 +733,10 @@ const DashboardHome = () => {
                             <Box sx={{ display: "flex", alignItems: "center" }}>
                               <HistoryIcon
                                 fontSize="small"
-                                sx={{ color: theme.palette.info.main, mr: 0.5 }}
+                                sx={{
+                                  color: theme.palette.info.main,
+                                  mr: 0.5,
+                                }}
                               />
                               <Typography
                                 variant="caption"
@@ -501,7 +750,11 @@ const DashboardHome = () => {
                           <Typography
                             variant="h4"
                             fontWeight="bold"
-                            color={theme.palette.success.dark}
+                            color={
+                              user.blockchainVerified
+                                ? theme.palette.success.dark
+                                : theme.palette.text.primary
+                            }
                           >
                             {user.totalCredits}
                             <Typography
@@ -560,74 +813,7 @@ const DashboardHome = () => {
                           </Box>
                         </Box>
 
-                        {/* Add blockchain transaction details if verified */}
-                        {user.blockchainVerified && (
-                          <Box
-                            sx={{
-                              mb: 2,
-                              pt: 1,
-                              pb: 2,
-                              borderTop: "1px dashed #c8e6c9",
-                            }}
-                          >
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              gutterBottom
-                            >
-                              Blockchain Verification:
-                            </Typography>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                mb: 1,
-                              }}
-                            >
-                              <LinkIcon
-                                sx={{
-                                  color: theme.palette.primary.main,
-                                  mr: 0.5,
-                                  fontSize: "small",
-                                }}
-                              />
-                              <Typography
-                                variant="caption"
-                                sx={{ wordBreak: "break-all" }}
-                              >
-                                TX:{" "}
-                                {user.txHash
-                                  ? user.txHash.substring(0, 10) + "..."
-                                  : "N/A"}
-                              </Typography>
-                              {user.txHash && (
-                                <IconButton
-                                  size="small"
-                                  onClick={() =>
-                                    window.open(
-                                      getBlockExplorerUrl(user.txHash),
-                                      "_blank"
-                                    )
-                                  }
-                                  sx={{ ml: 1, p: 0.5 }}
-                                >
-                                  <VisibilityIcon fontSize="small" />
-                                </IconButton>
-                              )}
-                            </Box>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              display="block"
-                            >
-                              Verified on:{" "}
-                              {formatDate(user.blockchainTimestamp)}
-                            </Typography>
-                          </Box>
-                        )}
-
                         <Button
-                          ref={purchaseButtonRef}
                           fullWidth
                           variant="contained"
                           color="success"
@@ -646,6 +832,12 @@ const DashboardHome = () => {
                           Buy Credits
                         </Button>
                       </CardContent>
+
+                      {/* Blockchain Verification Status */}
+                      {renderBlockchainStatus(user)}
+
+                      {/* Certificate Data */}
+                      {renderCertificateData(user)}
                     </Card>
                   </motion.div>
                 </Grid>
@@ -661,11 +853,6 @@ const DashboardHome = () => {
         onClose={() => setPurchaseDialogOpen(false)}
         fullWidth
         maxWidth="sm"
-        aria-modal="true"
-        // Ensure focus management
-        disableEnforceFocus={false}
-        // Don't restore focus to an element that might be within an aria-hidden container
-        disableRestoreFocus={false}
       >
         <DialogTitle>
           <Box
@@ -700,95 +887,24 @@ const DashboardHome = () => {
                       {selectedUser.email}
                     </Typography>
                   </Box>
+                </Box>
 
-                  {/* Add blockchain verification badge */}
-                  {selectedUser.blockchainVerified && (
-                    <Chip
-                      size="small"
-                      icon={<VerifiedIcon />}
-                      label="Blockchain Verified"
-                      color="primary"
-                      sx={{ ml: "auto", fontWeight: "medium" }}
+                {/* Show blockchain verification status in dialog */}
+                {selectedUser.blockchainVerified && (
+                  <Box sx={{ mt: 1, display: "flex", alignItems: "center" }}>
+                    <VerifiedIcon
+                      sx={{
+                        color: theme.palette.success.main,
+                        mr: 0.5,
+                        fontSize: "small",
+                      }}
                     />
-                  )}
-                </Box>
+                    <Typography variant="body2" color="success.main">
+                      Blockchain Verified
+                    </Typography>
+                  </Box>
+                )}
               </Box>
-
-              {/* Add blockchain verification details if available */}
-              {selectedUser.blockchainVerified && (
-                <Box sx={{ mb: 3, p: 2, bgcolor: "#f5f9ff", borderRadius: 1 }}>
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight="medium"
-                    color="primary"
-                    gutterBottom
-                  >
-                    Blockchain Verification Details
-                  </Typography>
-
-                  <Grid container spacing={1}>
-                    <Grid item xs={4}>
-                      <Typography variant="caption" color="text.secondary">
-                        Transaction ID:
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={8}>
-                      <Typography
-                        variant="caption"
-                        sx={{ wordBreak: "break-all" }}
-                      >
-                        {selectedUser.txHash}
-                      </Typography>
-                      <IconButton
-                        size="small"
-                        onClick={() =>
-                          window.open(
-                            getBlockExplorerUrl(selectedUser.txHash),
-                            "_blank"
-                          )
-                        }
-                        sx={{ ml: 1, p: 0.5 }}
-                      >
-                        <VisibilityIcon fontSize="small" />
-                      </IconButton>
-                    </Grid>
-
-                    <Grid item xs={4}>
-                      <Typography variant="caption" color="text.secondary">
-                        Verification Date:
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={8}>
-                      <Typography variant="caption">
-                        {selectedUser.blockchainTimestamp
-                          ? formatDate(selectedUser.blockchainTimestamp)
-                          : "N/A"}
-                      </Typography>
-                    </Grid>
-
-                    {selectedUser.walletAddress && (
-                      <>
-                        <Grid item xs={4}>
-                          <Typography variant="caption" color="text.secondary">
-                            Wallet Address:
-                          </Typography>
-                        </Grid>
-                        <Grid item xs={8}>
-                          <Typography
-                            variant="caption"
-                            sx={{ wordBreak: "break-all" }}
-                          >
-                            {selectedUser.walletAddress.substring(0, 10)}...
-                            {selectedUser.walletAddress.substring(
-                              selectedUser.walletAddress.length - 8
-                            )}
-                          </Typography>
-                        </Grid>
-                      </>
-                    )}
-                  </Grid>
-                </Box>
-              )}
 
               <Divider sx={{ my: 2 }} />
 

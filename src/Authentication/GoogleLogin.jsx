@@ -24,7 +24,7 @@ const GoogleLogin = ({ onLogin, userRole }) => {
 
       // Redirect based on role
       if (userRole === "farmer") {
-        navigate("/dashboard");
+        navigate("/dashboard/climate-forecast");
       } else {
         navigate("/dashboard/home");
       }
