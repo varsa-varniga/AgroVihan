@@ -50,12 +50,23 @@ import {
   Grass as GrassIcon,
   ElectricBolt as ElectricBoltIcon,
   EnergySavingsLeaf as EnergySavingsLeafIcon,
+  Wifi as WifiIcon,
+  WifiOff as WifiOffIcon,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { alpha } from "@mui/material/styles";
 import HowItWorks from "../../Components/carboncreditworks";
 import FAQ from "../../Components/carboncreditfaq";
 import { useState, useEffect } from "react";
+
+import {
+  initDB,
+  saveCalculationOffline,
+  getOfflineCalculations,
+  markAsSynced,
+  removeCalculation,
+} from "../../utils/indexedDBService";
+import NetworkStatus from "../../Components/NetworkStatus";
 
 import { db } from "../../firebaseConfig";
 import {
@@ -65,6 +76,8 @@ import {
   where,
   getDocs,
   Timestamp,
+  doc,
+  updateDoc,
 } from "firebase/firestore";
 
 import { auth } from "../../firebaseConfig";
@@ -86,6 +99,32 @@ const FarmerCarbonCreditCalculator = () => {
       setUser(currentUser);
     });
     return () => unsubscribe();
+  }, []);
+
+  // Add this to the useEffect section
+  useEffect(() => {
+    // Initialize IndexedDB
+    initDB().catch((err) =>
+      console.error("Failed to initialize IndexedDB:", err)
+    );
+
+    // Check for offline calculations to sync
+    checkOfflineCalculations();
+
+    // Add event listeners for online/offline status
+    const handleOnline = () => {
+      setIsOnline(true);
+      syncOfflineData();
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
   }, []);
 
   const userEmail = user?.email;
@@ -113,6 +152,9 @@ const FarmerCarbonCreditCalculator = () => {
   const [walletAddress, setWalletAddress] = useState("");
   const [txHash, setTxHash] = useState("");
   const [error, setError] = useState(null);
+
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingUploads, setPendingUploads] = useState(0);
 
   const handleConnectWallet = async () => {
     try {
@@ -239,7 +281,7 @@ const FarmerCarbonCreditCalculator = () => {
       // Calculate carbon credits (1 credit = 1000 kg CO2)
       const credits = totalCO2 / CARBON_CREDIT_RATE;
 
-      setResults({
+      const resultData = {
         totalCO2,
         credits,
         timestamp: new Date().toLocaleString(),
@@ -253,10 +295,38 @@ const FarmerCarbonCreditCalculator = () => {
           rainwaterCO2,
           electricPumpCO2,
         },
-      });
+      };
 
-      // Save to Firebase
-      await saveCarbonData(userEmail, username, credits, totalCO2);
+      setResults(resultData);
+
+      // Try to save to Firebase if online, otherwise save locally
+      if (navigator.onLine) {
+        try {
+          // Save to Firebase
+          await saveCarbonData(userEmail, username, credits, totalCO2);
+        } catch (error) {
+          console.error("Failed to save to Firebase, storing offline:", error);
+          // Save offline if Firebase fails
+          await saveCalculationOffline({
+            email: userEmail,
+            username,
+            carbonCredits: credits,
+            co2Saved: totalCO2,
+            details: formData,
+          });
+          setPendingUploads((prev) => prev + 1);
+        }
+      } else {
+        // Save offline if not connected
+        await saveCalculationOffline({
+          email: userEmail,
+          username,
+          carbonCredits: credits,
+          co2Saved: totalCO2,
+          details: formData,
+        });
+        setPendingUploads((prev) => prev + 1);
+      }
 
       setLoading(false);
     }, 1500);
@@ -299,6 +369,14 @@ const FarmerCarbonCreditCalculator = () => {
       setTxHash(result.txHash);
       setSavedToBlockchain(true);
 
+      await updateBlockchainStatus(
+        userEmail,
+        username,
+        result.txHash,
+        results.credits,
+        results.totalCO2
+      );
+
       // Show success message
       console.log("Successfully saved to blockchain!", result);
     } catch (err) {
@@ -306,6 +384,85 @@ const FarmerCarbonCreditCalculator = () => {
       setError(err.message || "Failed to save to blockchain");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // New function to update blockchain status in Firebase
+  // In the updateBlockchainStatus function (around line 343)
+
+  // The updated updateBlockchainStatus function
+  const updateBlockchainStatus = async (
+    email,
+    username,
+    txHash,
+    carbonCredits,
+    co2Saved
+  ) => {
+    try {
+      console.log("🔗 Updating blockchain status for:", email);
+
+      const userCollection = collection(db, "carbonCalculations");
+
+      // Step 1: Find the existing document for the user
+      const q = query(userCollection, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+
+      // For finding the most recently created document
+      let mostRecentDoc = null;
+      let mostRecentTimestamp = null;
+
+      if (!querySnapshot.empty) {
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          // Find the most recent document to update
+          if (
+            !mostRecentTimestamp ||
+            (data.timestamp && data.timestamp.toDate() > mostRecentTimestamp)
+          ) {
+            mostRecentDoc = doc;
+            mostRecentTimestamp = data.timestamp
+              ? data.timestamp.toDate()
+              : null;
+          }
+        });
+
+        // Step 2: Update the most recent document with blockchain details
+        if (mostRecentDoc) {
+          const docRef = doc(db, "carbonCalculations", mostRecentDoc.id);
+
+          await updateDoc(docRef, {
+            blockchainVerified: true,
+            txHash: txHash,
+            blockchainTimestamp: Timestamp.now(),
+            walletAddress: walletAddress,
+          });
+
+          console.log(
+            "✅ Existing document updated with blockchain verification!"
+          );
+        }
+      }
+
+      // Also create a new blockchain verification record
+      const verificationRecord = await addDoc(userCollection, {
+        email,
+        username,
+        carbonCredits,
+        co2Saved,
+        blockchainVerified: true,
+        txHash: txHash,
+        blockchainTimestamp: Timestamp.now(),
+        walletAddress: walletAddress,
+        details: formData, // Also save calculation details
+        timestamp: Timestamp.now(),
+        verificationRecord: true, // Flag to indicate this is a verification record
+      });
+
+      console.log("✅ Blockchain verification record saved to Firestore!");
+      console.log("📄 Verification Document ID:", verificationRecord.id);
+    } catch (error) {
+      console.error("❌ Error saving blockchain data:", error);
+      // Even if this fails, don't break the user experience
     }
   };
 
@@ -339,16 +496,60 @@ const FarmerCarbonCreditCalculator = () => {
     return statements;
   };
 
+  const checkOfflineCalculations = async () => {
+    try {
+      const offlineData = await getOfflineCalculations();
+      const unsyncedData = offlineData.filter((item) => !item.synced);
+      setPendingUploads(unsyncedData.length);
+    } catch (error) {
+      console.error("Failed to check offline calculations:", error);
+    }
+  };
+
+  const syncOfflineData = async () => {
+    if (!navigator.onLine) return;
+
+    try {
+      const offlineData = await getOfflineCalculations();
+      const unsyncedData = offlineData.filter((item) => !item.synced);
+
+      if (unsyncedData.length === 0) return;
+
+      setLoading(true);
+
+      for (const item of unsyncedData) {
+        // Save to Firebase
+        await saveCarbonData(
+          item.email,
+          item.username,
+          item.carbonCredits,
+          item.co2Saved
+        );
+
+        // Mark as synced
+        await markAsSynced(item.id);
+      }
+
+      // Update pending uploads count
+      setPendingUploads(0);
+      setLoading(false);
+    } catch (error) {
+      console.error("Failed to sync offline data:", error);
+      setLoading(false);
+    }
+  };
+
   return (
     <Box
       sx={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #f5f7fa 0%, #e4f5e8 100%)",
         fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
         pt: 2,
         pb: 6,
       }}
     >
+      {/* Network Status Indicator */}
+      <NetworkStatus pendingUploads={pendingUploads} />
       {/* Main Content */}
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <motion.div
@@ -1274,6 +1475,51 @@ const FarmerCarbonCreditCalculator = () => {
                         </Box>
                       </Zoom>
                     )}
+                  </Box>
+                </Fade>
+              )}
+
+              {/* Sync Notification */}
+              {pendingUploads > 0 && !isOnline && (
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 2,
+                    backgroundColor: "#fff3e0",
+                    borderRadius: 2,
+                    borderLeft: "4px solid #ff9800",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{ display: "flex", alignItems: "center" }}
+                  >
+                    <WifiOffIcon sx={{ mr: 1, color: "#ff9800" }} />
+                    {pendingUploads} calculation{pendingUploads > 1 ? "s" : ""}{" "}
+                    saved offline. Data will sync automatically when connected
+                    to the internet.
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Sync Success Notification */}
+              {isOnline && pendingUploads === 0 && (
+                <Fade in timeout={300}>
+                  <Box
+                    sx={{
+                      mt: 2,
+                      p: 2,
+                      backgroundColor: "#e8f5e9",
+                      borderRadius: 2,
+                      borderLeft: "4px solid #4caf50",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <CheckCircleIcon sx={{ mr: 1, color: "#4caf50" }} />
+                    <Typography variant="body2">
+                      All data synced with the server.
+                    </Typography>
                   </Box>
                 </Fade>
               )}

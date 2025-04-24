@@ -332,6 +332,14 @@ const ClimateAIForecast = () => {
       icon: "🌡️"
     },
   ];
+
+  const temperatureDomain = () => {
+    const temps = tempData.map(item => item.temp);
+    const minTemp = Math.min(...temps);
+    const maxTemp = Math.max(...temps);
+    const padding = (maxTemp - minTemp) * 0.2; // 20% padding
+    return [minTemp - padding, maxTemp + padding];
+  };
   
   return (
     <Container
@@ -377,7 +385,7 @@ const ClimateAIForecast = () => {
               alignItems: "center",
               mb: 3,
               backgroundColor: cardBackground,
-              borderRadius: 3,
+          
               p: 3,
               boxShadow: 1,
             }}
@@ -416,26 +424,28 @@ const ClimateAIForecast = () => {
         <Card
           sx={{ 
             mt: 3,
-            p: 3, 
+            p: 0, // Remove padding from the card
             backgroundColor: cardBackground,
-            borderRadius: 3,
             boxShadow: 1,
-            flex: 1
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden' // Prevent content overflow
           }}
         >
           <Typography sx={{ 
-            mb: 2, 
+            p: 3, // Add padding to the title
             fontSize: "1.1rem",
             fontWeight: 500,
             color: darkGreen
           }}>
             Temperature (24h)
           </Typography>
-          <Box sx={{ height: 100 }}>
-            <ResponsiveContainer width="100%" height="100%">
+          <Box sx={{ height: 100, display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
+            <ResponsiveContainer width="95%" height="100%">
               <LineChart data={tempData}>
                 <XAxis dataKey="label" />
-                <YAxis domain={['auto', 'auto']} />
+                <YAxis domain={temperatureDomain()} />
                 <Tooltip />
                 <Line 
                   type="monotone" 
@@ -459,7 +469,8 @@ const ClimateAIForecast = () => {
             backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url(${farmBg})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
-            borderRadius: 3,
+           
+            
             color: "#fff",
             display: "flex",
             flexDirection: "column",
@@ -496,7 +507,6 @@ const ClimateAIForecast = () => {
             size="medium"
             sx={{
               backgroundColor: primaryGreen,
-              borderRadius: 3,
               textTransform: "none",
               fontWeight: 600,
               width: "fit-content",
@@ -530,7 +540,6 @@ const ClimateAIForecast = () => {
           mb: 3,
           alignItems: "center",
           backgroundColor: cardBackground,
-          borderRadius: 3,
           p: 3,
           boxShadow: 1
         }}>
@@ -563,7 +572,6 @@ const ClimateAIForecast = () => {
         <Box sx={{ 
           mb: 3,
           backgroundColor: cardBackground,
-          borderRadius: 3,
           p: 2,
           boxShadow: 1
         }}>
@@ -586,7 +594,6 @@ const ClimateAIForecast = () => {
             },
             '&::-webkit-scrollbar-thumb': {
               backgroundColor: primaryGreen,
-              borderRadius: '4px',
             }
           }}>
             {forecast.map((d, idx) => (
@@ -596,7 +603,6 @@ const ClimateAIForecast = () => {
                   minWidth: 100,
                   textAlign: "center",
                   backgroundColor: "#f9f9f9",
-                  borderRadius: 3,
                   p: 2,
                   boxShadow: 1,
                   flex: "0 0 auto",
@@ -619,7 +625,6 @@ const ClimateAIForecast = () => {
           sx={{
             flex: 1,
             backgroundColor: cardBackground,
-            borderRadius: 3,
             p: 4,
             boxShadow: 1
           }}
@@ -635,7 +640,7 @@ const ClimateAIForecast = () => {
             Today's Overview
           </Typography>
 
-          <Grid container spacing={6}>
+          <Grid container spacing={3}>
             {overviewData.map((item, idx) => (
               <Grid
                 item
@@ -644,21 +649,19 @@ const ClimateAIForecast = () => {
                 md={4}
                 key={idx}
                 sx={{
-                  display: 'flex'
+                  display: 'flex',
+                  alignItems: 'stretch'
                 }}
               >
                 <Card
                   sx={{
                     flex: 1,
-                    height: 250, // Fixed height
-                    width: 250,
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'center',
+                    justifyContent: 'space-between', // Distribute space evenly
                     alignItems: 'center',
                     backgroundColor: cardBackground,
-                    borderRadius: 3,
-                    p: 4,
+                    p: 3,
                     boxShadow: 2,
                     borderLeft: `4px solid ${primaryGreen}`,
                     transition: 'all 0.3s ease',
@@ -703,7 +706,8 @@ const ClimateAIForecast = () => {
                           fontWeight: 600,
                           fontSize: '1.8rem',
                           color: textPrimary,
-                          my: 1
+                          my: 1,
+                          textAlign: 'center' // Center the value
                         }}
                       >
                         {item.value}
