@@ -289,7 +289,9 @@ const Details = () => {
       trainingTitle: training.title,
       trainingDate: training.date,
       trainingTime: training.time,
-      trainingLocation: training.location,
+      trainingLocatio
+      
+    : training.location,
       districtId: id,
       userId: "anonymous", // Replace with actual user ID if available
       registrationDate: new Date().toISOString()
@@ -297,7 +299,6 @@ const Details = () => {
 
     try {
       await addTrainingSessionToFirebase(newTrainingSession);
-
       // Show success message
       setOpenSnackbar(true);
 
