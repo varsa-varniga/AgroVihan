@@ -16,6 +16,7 @@ import Fertilizer from "./pages/Fertilizer.jsx";
 import Carbon from "./pages/Carbon_credit.jsx";
 import Chat from "./pages/Chat.jsx";
 import Hubs from "./pages/Hubs.jsx";
+import NammalvarPage from "./pages/Nammalvar.jsx";
 
 import TaskManagement from './pages/TaskManagement.jsx';
 
@@ -77,6 +78,7 @@ function App() {
             <Welcome/>
             <Climate/>
             <Disease/>
+            <NammalvarPage/>
             <Fertilizer/>
             <Carbon/>
             <Chat/>
