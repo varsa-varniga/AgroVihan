@@ -39,6 +39,15 @@ export default function CropMonitoringDashboard() {
   const [suggestion, setSuggestion] = useState('');
   const [fetchingSuggestion, setFetchingSuggestion] = useState(false);
   const [suggestionError, setSuggestionError] = useState(null);
+  
+  // Firebase sensor data
+  const [sensorData, setSensorData] = useState({
+    temperature: "--",
+    humidity: "--",
+    soil_moisture: "--"
+  });
+  const [loadingSensorData, setLoadingSensorData] = useState(true);
+  const [sensorError, setSensorError] = useState(null);
 
   const cropTypes = ['Rice', 'Wheat', 'Corn', 'Tomato', 'Cotton', 'Potato', 'Sugarcane'];
   const cropPhases = ['Germination', 'Vegetative', 'Flowering', 'Harvest'];
@@ -47,6 +56,9 @@ export default function CropMonitoringDashboard() {
   const lat = 11.0168;
   const lon = 76.9558;
   const BACKEND_URL = 'http://localhost:5000/suggest';
+  
+  // Firebase config - Updated to match ESP32 path
+  const FIREBASE_URL = "https://agrovihan-default-rtdb.asia-southeast1.firebasedatabase.app/dht.json";
 
   // Green theme colors
   const themeColors = {
@@ -61,7 +73,21 @@ export default function CropMonitoringDashboard() {
 
   useEffect(() => {
     fetchWeatherData();
+    fetchSensorData();
+    
+    // Set up interval to fetch sensor data every 10 seconds
+    const interval = setInterval(() => {
+      fetchSensorData();
+    }, 10000);
+    
+    // Clear interval on component unmount
+    return () => clearInterval(interval);
   }, []);
+
+  // Log when sensor data changes for debugging
+  useEffect(() => {
+    console.log("Current sensor data:", sensorData);
+  }, [sensorData]);
 
   const fetchWeatherData = async () => {
     setLoading(true);
@@ -87,6 +113,35 @@ export default function CropMonitoringDashboard() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const fetchSensorData = async () => {
+    setLoadingSensorData(true);
+    setSensorError(null);
+    try {
+      console.log("Fetching sensor data from:", FIREBASE_URL);
+      const response = await axios.get(FIREBASE_URL);
+      console.log("Sensor data response:", response.data); // For debugging
+      
+      if (response.data) {
+        // Store the data, providing fallbacks in case properties are missing
+        const data = response.data;
+        setSensorData({
+          temperature: data.temperature !== undefined ? data.temperature : "--",
+          humidity: data.humidity !== undefined ? data.humidity : "--",
+          soil_moisture: data.soil_moisture !== undefined ? data.soil_moisture : "--"
+        });
+        setSensorError(null);
+      } else {
+        throw new Error("No sensor data available");
+      }
+    } catch (err) {
+      console.error("Error fetching sensor data:", err);
+      setSensorError("Failed to fetch sensor data. Please check your connection.");
+      // Don't update sensor data state to keep previous values
+    } finally {
+      setLoadingSensorData(false);
     }
   };
 
@@ -173,6 +228,122 @@ export default function CropMonitoringDashboard() {
     );
   };
 
+  const renderSensorData = () => {
+    if (loadingSensorData) {
+      return <LinearProgress sx={{ my: 2, backgroundColor: themeColors.secondary }} color="success" />;
+    }
+    
+    if (sensorError) {
+      return <Alert severity="error" sx={{ my: 2 }}>{sensorError}</Alert>;
+    }
+    
+    return (
+      <Grid container spacing={3}>
+        {/* Temperature Container */}
+        <Grid item xs={12} sm={4}>
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: 3, 
+              borderRadius: 3,
+              background: `linear-gradient(to bottom, #ffffff, ${themeColors.light})`,
+              borderLeft: `5px solid #e57373`,
+              textAlign: 'center'
+            }}
+          >
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: '#d32f2f',
+                fontWeight: 500,
+                mb: 1
+              }}
+            >
+              Temperature
+            </Typography>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                color: '#d32f2f',
+                fontWeight: 600
+              }}
+            >
+              {sensorData.temperature}°C
+            </Typography>
+          </Paper>
+        </Grid>
+        
+        {/* Humidity Container */}
+        <Grid item xs={12} sm={4}>
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: 3, 
+              borderRadius: 3,
+              background: `linear-gradient(to bottom, #ffffff, ${themeColors.light})`,
+              borderLeft: `5px solid #64b5f6`,
+              textAlign: 'center'
+            }}
+          >
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: '#1976d2',
+                fontWeight: 500,
+                mb: 1
+              }}
+            >
+              Humidity
+            </Typography>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                color: '#1976d2',
+                fontWeight: 600
+              }}
+            >
+              {sensorData.humidity}%
+            </Typography>
+          </Paper>
+        </Grid>
+        
+        {/* Soil Moisture Container */}
+        <Grid item xs={12} sm={4}>
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: 3, 
+              borderRadius: 3,
+              background: `linear-gradient(to bottom, #ffffff, ${themeColors.light})`,
+              borderLeft: `5px solid #8d6e63`,
+              textAlign: 'center'
+            }}
+          >
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: '#5d4037',
+                fontWeight: 500,
+                mb: 1
+              }}
+            >
+              Soil Moisture
+            </Typography>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                color: '#5d4037',
+                fontWeight: 600
+              }}
+            >
+              {sensorData.soil_moisture}%
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+    );
+  };
+
   return (
     <Box sx={{ 
       minHeight: '100vh', 
@@ -239,6 +410,56 @@ export default function CropMonitoringDashboard() {
             </Tooltip>
           </Stack>
           {renderWeatherSummary()}
+        </Paper>
+
+        {/* Live Sensor Readings from Firebase - Moved up for more prominence */}
+        <Paper 
+          elevation={4} 
+          sx={{ 
+            p: 4, 
+            mb: 3, 
+            borderRadius: 3,
+            background: `linear-gradient(to bottom, #ffffff, ${themeColors.light})`,
+            borderTop: `5px solid ${themeColors.primary}`
+          }}
+        >
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: themeColors.textPrimary,
+                fontWeight: 600
+              }}
+            >
+              Live Sensor Readings
+            </Typography>
+            <Tooltip title="Refresh Sensor Data">
+              <IconButton 
+                onClick={fetchSensorData} 
+                disabled={loadingSensorData}
+                sx={{ 
+                  color: themeColors.primary,
+                  '&:hover': { backgroundColor: themeColors.light }
+                }}
+              >
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+          
+          {renderSensorData()}
+          
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: themeColors.textSecondary,
+              mt: 2,
+              textAlign: 'center',
+              fontStyle: 'italic'
+            }}
+          >
+            Data refreshes automatically every 10 seconds
+          </Typography>
         </Paper>
 
         <Paper 
